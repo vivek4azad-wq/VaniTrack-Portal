@@ -1643,7 +1643,7 @@ function getStationCodeByName(name) {
 // -------------------------------------------------------------
 // 3. SYNCHRONIZATION ENGINE & KM INSPECTOR
 // -------------------------------------------------------------
-function navigateToKm(km, panMap = true, isLinkLine = null, explicitGps = null) {
+function navigateToKm(km, panMap = true, isLinkLine = null, explicitGps = null, recenterLinear = true) {
   if (isLinkLine !== null) {
     isLinkLineSelected = !!isLinkLine;
   }
@@ -1655,7 +1655,16 @@ function navigateToKm(km, panMap = true, isLinkLine = null, explicitGps = null) 
   currentKm = km;
 
   // 1. Update Linear Diagram Viewport
-  viewKmStart = km - viewKmSpan / 2;
+  if (recenterLinear) {
+    viewKmStart = km - viewKmSpan / 2;
+  } else {
+    // If not recentering, ensure currentKm is within view with a buffer
+    if (km < viewKmStart) {
+      viewKmStart = km - 0.2;
+    } else if (km > viewKmStart + viewKmSpan) {
+      viewKmStart = km - viewKmSpan + 0.2;
+    }
+  }
   renderLinearDiagram();
   renderScrubber();
 
@@ -2116,6 +2125,8 @@ function updateDrawingCard(km, isLinkLine = false) {
 // -------------------------------------------------------------
 // 4. LINEAR DIAGRAM ENGINE (HTML5 CANVAS)
 // -------------------------------------------------------------
+let linearMouseX = -1;
+
 function initLinearCanvases() {
   const vp = document.getElementById('linearViewport');
   linearCanvas = document.getElementById('linearCanvas');
@@ -2130,6 +2141,20 @@ function initLinearCanvases() {
     if (map) map.invalidateSize();
   });
 
+  // Mouse hover tracking (dynamic crosshair following cursor across linear diagram)
+  linearCanvas.addEventListener('mousemove', (e) => {
+    const rect = linearCanvas.getBoundingClientRect();
+    linearMouseX = e.clientX - rect.left;
+    if (!isDraggingLinear) {
+      renderLinearDiagram();
+    }
+  });
+
+  linearCanvas.addEventListener('mouseleave', () => {
+    linearMouseX = -1;
+    renderLinearDiagram();
+  });
+
   // Pan & Click Gestures
   let dragDistance = 0;
   vp.addEventListener('mousedown', (e) => {
@@ -2137,6 +2162,7 @@ function initLinearCanvases() {
     dragStartX = e.clientX;
     dragStartKm = viewKmStart;
     dragDistance = 0;
+    vp.style.cursor = 'grabbing';
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -2144,17 +2170,22 @@ function initLinearCanvases() {
       const dx = e.clientX - dragStartX;
       dragDistance = Math.abs(dx);
       const dKm = -(dx / linearCanvas.width) * viewKmSpan;
-      viewKmStart = Math.max(minCorridorKm - 2, Math.min(maxCorridorKm - viewKmSpan + 2, dragStartKm + dKm));
-      currentKm = viewKmStart + viewKmSpan / 2;
-      navigateToKm(currentKm, false); // sync marker without violent map panning
+      const minLimit = isLinkLineSelected ? 1170.435 - 0.5 : minCorridorKm - 2;
+      const maxLimit = isLinkLineSelected ? 1178.150 + 0.5 : maxCorridorKm + 2;
+      viewKmStart = Math.max(minLimit, Math.min(maxLimit - viewKmSpan, dragStartKm + dKm));
+      const rect = linearCanvas.getBoundingClientRect();
+      linearMouseX = e.clientX - rect.left;
+      renderLinearDiagram();
+      renderScrubber();
     }
   });
 
   window.addEventListener('mouseup', (e) => {
     if (isDraggingLinear) {
       isDraggingLinear = false;
+      vp.style.cursor = 'grab';
       // If it was a click without significant drag (< 6px), check bridge hitbox click
-      if (dragDistance < 6 && e.target === linearCanvas) {
+      if (dragDistance < 6 && (e.target === linearCanvas || e.target === vp)) {
         const rect = linearCanvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
@@ -2162,7 +2193,7 @@ function initLinearCanvases() {
         // Check if any bridge was clicked
         let clickedBridge = null;
         for (const hb of bridgeHitboxes) {
-          if (Math.abs(hb.x - clickX) <= 12 && Math.abs(hb.y - clickY) <= 22) {
+          if (Math.abs(hb.x - clickX) <= 14 && Math.abs(hb.y - clickY) <= 24) {
             clickedBridge = hb.bridge;
             break;
           }
@@ -2181,34 +2212,85 @@ function initLinearCanvases() {
           openBridgeModal(clickedBridge.bridge_no);
         } else if (clickedCurve) {
           const midKm = (parseFloat(clickedCurve.km_from) + parseFloat(clickedCurve.km_to)) / 2;
-          navigateToKm(midKm, true);
+          navigateToKm(midKm, true, isLinkLineSelected, null, false);
         } else {
-          // Jump to clicked KM
+          // Jump to clicked KM without forcibly recentering linear viewport
           const W = vp.clientWidth;
           const clickedKm = viewKmStart + (clickX / W) * viewKmSpan;
-          navigateToKm(clickedKm, true);
+          navigateToKm(clickedKm, true, isLinkLineSelected, null, false);
         }
       } else {
-        navigateToKm(currentKm, true); // smooth map align
+        // Drag finished - ensure currentKm is kept in view if it slipped out
+        if (currentKm < viewKmStart || currentKm > viewKmStart + viewKmSpan) {
+          currentKm = viewKmStart + viewKmSpan / 2;
+          navigateToKm(currentKm, true, isLinkLineSelected, null, false);
+        }
       }
     }
   });
 
-  // Wheel Zoom
+  // Mobile Touch Gestures (1-finger pan/scrub)
+  vp.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDraggingLinear = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartKm = viewKmStart;
+      dragDistance = 0;
+      const rect = linearCanvas.getBoundingClientRect();
+      linearMouseX = e.touches[0].clientX - rect.left;
+      renderLinearDiagram();
+    }
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', (e) => {
+    if (isDraggingLinear && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - dragStartX;
+      dragDistance = Math.abs(dx);
+      const dKm = -(dx / linearCanvas.width) * viewKmSpan;
+      const minLimit = isLinkLineSelected ? 1170.435 - 0.5 : minCorridorKm - 2;
+      const maxLimit = isLinkLineSelected ? 1178.150 + 0.5 : maxCorridorKm + 2;
+      viewKmStart = Math.max(minLimit, Math.min(maxLimit - viewKmSpan, dragStartKm + dKm));
+      const rect = linearCanvas.getBoundingClientRect();
+      linearMouseX = e.touches[0].clientX - rect.left;
+      renderLinearDiagram();
+      renderScrubber();
+    }
+  }, { passive: true });
+
+  vp.addEventListener('touchend', (e) => {
+    if (isDraggingLinear) {
+      isDraggingLinear = false;
+      if (dragDistance < 8 && linearMouseX >= 0) {
+        const clickedKm = viewKmStart + (linearMouseX / vp.clientWidth) * viewKmSpan;
+        navigateToKm(clickedKm, true, isLinkLineSelected, null, false);
+      }
+      linearMouseX = -1;
+      renderLinearDiagram();
+    }
+  });
+
+  // Wheel Zoom centered on cursor
   vp.addEventListener('wheel', (e) => {
     e.preventDefault();
+    const rect = linearCanvas.getBoundingClientRect();
+    const cursorRatio = (linearMouseX >= 0 && linearMouseX <= rect.width)
+      ? linearMouseX / rect.width
+      : 0.5;
+    const cursorKm = viewKmStart + cursorRatio * viewKmSpan;
     const factor = e.deltaY < 0 ? 0.8 : 1.25;
-    viewKmSpan = Math.max(1.0, Math.min(35.0, viewKmSpan * factor));
-    viewKmStart = currentKm - viewKmSpan / 2;
+    const newSpan = Math.max(0.5, Math.min(35.0, viewKmSpan * factor));
+    viewKmStart = cursorKm - cursorRatio * newSpan;
+    viewKmSpan = newSpan;
     renderLinearDiagram();
-  });
+    renderScrubber();
+  }, { passive: false });
 
   // Scrubber click
   scrubberCanvas.addEventListener('click', (e) => {
     const rect = scrubberCanvas.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
     const km = minCorridorKm + pct * (maxCorridorKm - minCorridorKm);
-    navigateToKm(km);
+    navigateToKm(km, true, isLinkLineSelected, null, true);
   });
 }
 
@@ -2265,22 +2347,51 @@ function renderLinearDiagram() {
   ctx.lineTo(W, splitY);
   ctx.stroke();
 
-  // 1. KM Grid Vertical Lines
-  const kmStep = viewKmSpan <= 3 ? 0.2 : (viewKmSpan <= 8 ? 0.5 : 1.0);
-  const startTick = Math.floor(k1 / kmStep) * kmStep;
-
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+  // 1. TOP CHAINAGE RULER (KM Ticks & Labels across top of canvas)
+  ctx.fillStyle = '#0a101d';
+  ctx.fillRect(0, 0, W, 22);
+  ctx.strokeStyle = '#1e293b';
   ctx.lineWidth = 1;
-  for (let k = startTick; k <= k2; k += kmStep) {
+  ctx.beginPath();
+  ctx.moveTo(0, 22);
+  ctx.lineTo(W, 22);
+  ctx.stroke();
+
+  let kmStep = 1.0;
+  if (viewKmSpan > 25) kmStep = 5.0;
+  else if (viewKmSpan > 10) kmStep = 2.0;
+  else if (viewKmSpan <= 1.5) kmStep = 0.2;
+  else if (viewKmSpan <= 4.0) kmStep = 0.5;
+
+  const startTick = Math.floor(k1 / kmStep) * kmStep;
+  const endTick = Math.ceil(k2 / kmStep) * kmStep;
+
+  for (let k = startTick; k <= endTick; k += kmStep) {
     const gx = kmToX(k);
+    if (gx < -20 || gx > W + 20) continue;
+    const isMajor = Math.abs(k - Math.round(k)) < 0.001;
+
+    // Tick on ruler
+    ctx.strokeStyle = isMajor ? '#38bdf8' : '#64748b';
+    ctx.lineWidth = isMajor ? 1.5 : 1;
     ctx.beginPath();
-    ctx.moveTo(gx, 0);
+    ctx.moveTo(gx, isMajor ? 4 : 12);
+    ctx.lineTo(gx, 22);
+    ctx.stroke();
+
+    // Full vertical grid line
+    ctx.strokeStyle = isMajor ? 'rgba(56, 189, 248, 0.12)' : 'rgba(148, 163, 184, 0.05)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx, 22);
     ctx.lineTo(gx, H);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
-    ctx.font = '9px monospace';
-    ctx.fillText(`${k.toFixed(1)}`, gx + 3, splitY - 4);
+    // Ruler Text
+    ctx.fillStyle = isMajor ? '#f8fafc' : '#94a3b8';
+    ctx.font = isMajor ? 'bold 9.5px monospace' : '8.5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(isMajor ? `${Math.round(k)}` : `${k.toFixed(1)}`, gx, 15);
   }
 
   // 2. PLAN VIEW (UP TRACK, DN TRACK, LOOPS, BRIDGES, CURVES)
@@ -2539,33 +2650,86 @@ function renderLinearDiagram() {
     }
   });
 
-  // 4. Cursor / Center Marker Indicator
+  // 4. SELECTED KM INDICATOR & DYNAMIC HOVER CROSSHAIR
   const curX = kmToX(currentKm);
-  ctx.strokeStyle = '#38bdf8';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 3]);
-  ctx.beginPath();
-  ctx.moveTo(curX, 0);
-  ctx.lineTo(curX, H);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  const isSelectedVisible = curX >= -10 && curX <= W + 10;
 
-  // Indicator Badge
-  ctx.fillStyle = '#0284c7';
-  ctx.fillRect(curX - 32, 4, 64, 18);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(`KM ${currentKm.toFixed(2)}`, curX, 17);
+  // 4A. Selected KM Pin (Solid Line & Blue Badge)
+  if (isSelectedVisible) {
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(curX, 0);
+    ctx.lineTo(curX, H);
+    ctx.stroke();
+
+    // Selected Badge at Top
+    const badgeW = 74;
+    const badgeH = 18;
+    const bx = Math.max(badgeW / 2 + 2, Math.min(W - badgeW / 2 - 2, curX));
+    ctx.fillStyle = '#0284c7';
+    ctx.shadowColor = 'rgba(2, 132, 199, 0.6)';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(bx - badgeW / 2, 2, badgeW, badgeH);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx - badgeW / 2, 2, badgeW, badgeH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`KM ${currentKm.toFixed(3)}`, bx, 11);
+  }
+
+  // 4B. Dynamic Mouse Hover Crosshair & Follower Badge
+  if (linearMouseX >= 0 && linearMouseX <= W) {
+    const hoverKm = viewKmStart + (linearMouseX / W) * viewKmSpan;
+    
+    // Tracking line following mouse
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(linearMouseX, 0);
+    ctx.lineTo(linearMouseX, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Hover Badge floating with cursor
+    const hBadgeW = 82;
+    const hBadgeH = 18;
+    const hbx = Math.max(hBadgeW / 2 + 2, Math.min(W - hBadgeW / 2 - 2, linearMouseX));
+    const hby = isSelectedVisible && Math.abs(curX - linearMouseX) < 76 ? 24 : 2;
+
+    ctx.fillStyle = '#d97706';
+    ctx.shadowColor = 'rgba(245, 158, 11, 0.6)';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(hbx - hBadgeW / 2, hby, hBadgeW, hBadgeH);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(hbx - hBadgeW / 2, hby, hBadgeW, hBadgeH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`KM ${hoverKm.toFixed(3)}`, hbx, hby + 9);
+  }
 
   ctx.restore();
 
   // Update text label
   const rangeTxt = document.getElementById('linearRangeTxt');
   if (rangeTxt) {
-    rangeTxt.innerHTML = isLinkLineSelected 
+    const hoverInfo = (linearMouseX >= 0 && linearMouseX <= W)
+      ? ` | <span style="color:#f59e0b; font-weight:800;">Cursor: KM ${(viewKmStart + (linearMouseX / W) * viewKmSpan).toFixed(3)}</span>`
+      : '';
+    rangeTxt.innerHTML = (isLinkLineSelected 
       ? `<span style="color:#ef4444; font-weight:800;">🔗 LINK LINE (SMUN-RPJ)</span>: KM ${k1.toFixed(1)} to ${k2.toFixed(1)} (${viewKmSpan.toFixed(1)} km span)`
-      : `KM ${k1.toFixed(1)} to ${k2.toFixed(1)} (${viewKmSpan.toFixed(1)} km span)`;
+      : `KM ${k1.toFixed(1)} to ${k2.toFixed(1)} (${viewKmSpan.toFixed(1)} km span)`) + hoverInfo;
   }
 }
 
