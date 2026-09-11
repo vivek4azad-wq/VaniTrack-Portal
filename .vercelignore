@@ -1,0 +1,15 @@
+.git
+.DS_Store
+*.zip
+*.tar.gz
+*.rar
+android-app/
+P&P.zip
+Store(1).zip
+data/P&P/
+data/Store/
+data/Store/Store/Sap master code data/
+At a Glance.xlsx
+Vivek.xlsx
+Loop Line Data.xls
+*.pdf
