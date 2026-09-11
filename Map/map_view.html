@@ -944,13 +944,13 @@ let dragStartX = 0, dragStartKm = 0;
 
 // Official Keyplan Stations Metadata
 const keyplanStations = {
-  'SMUN': { code:'SMUN', name:'New Shambhu (SMUN)', type:'Junction Station', dfcKm:'1170.435', irKm:'281.027', points:'201A to 297', lines:'UP Main, DN Main, Loops 1-4 (750M CAL), IR Chord', file:'SMUN_keyplan.png' },
-  'RPJ':  { code:'RPJ', name:'Rajpura Junction (RPJ)', type:'NR Interchange Junction', dfcKm:'1178.150', irKm:'288.7', points:'Northern Railway Chord Junction', lines:'DFC Link Line Chord, NR Ambala-Ludhiana, RPJ-Bathinda', file:'SMUN_keyplan.png' },
-  'SBJN': { code:'SBJN', name:'New Sarai Banjara (SBJN)', type:'Junction Station', dfcKm:'1188.575', irKm:'-', points:'201A to 289B', lines:'UP Main, DN Main, Loops 1-3, IR Connecting Track', file:'SBJN_keyplan.png' },
-  'NSIR': { code:'NSIR', name:'New Sirhind (NSIR)', type:'Junction Station', dfcKm:'1202.015', irKm:'-', points:'201 to 299', lines:'UP Main, DN Main, Multi-track Yard, NR Sirhind Chord', file:'NSIR_keyplan.png' },
-  'GVGN': { code:'GVGN', name:'New Mandi Gobindgarh (GVGN)', type:'Crossing Station', dfcKm:'1213.187', irKm:'-', points:'201 to 230', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), X-Over', file:'GVGN_keyplan.png' },
-  'KNNN': { code:'KNNN', name:'New Khanna (KNNN)', type:'Crossing Station', dfcKm:'1229.087', irKm:'-', points:'201 to 232', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), Overruns', file:'KNNN_keyplan.png' },
-  'CHAN': { code:'CHAN', name:'New Chawa Pail (CHAN)', type:'Junction Station', dfcKm:'1235.837', irKm:'-', points:'201A to 260B', lines:'UP Main, DN Main, Loops 1-3 (750M CAL), Overrun Tracks', file:'CHAN_keyplan.png' }
+  'SMUN': { code:'SMUN', name:'New Shambhu (SMUN)', type:'Junction Station', dfcKm:'1170.435', irKm:'281.027', points:'201A to 297', lines:'UP Main, DN Main, Loops 1-4 (750M CAL), IR Chord', file:'SMUN_keyplan.png', dwg:'EXG & NEW.SHAMBHU ESP.dwg' },
+  'RPJ':  { code:'RPJ', name:'Rajpura Junction (RPJ)', type:'NR Interchange Junction', dfcKm:'1178.150', irKm:'288.7', points:'Northern Railway Chord Junction', lines:'DFC Link Line Chord, NR Ambala-Ludhiana, RPJ-Bathinda', file:'SMUN_keyplan.png', dwg:'EXG & NEW.SHAMBHU ESP.dwg' },
+  'SBJN': { code:'SBJN', name:'New Sarai Banjara (SBJN)', type:'Junction Station', dfcKm:'1188.575', irKm:'-', points:'201A to 289B', lines:'UP Main, DN Main, Loops 1-3, IR Connecting Track', file:'SBJN_keyplan.png', dwg:'NEW SARAI BANJARA-AB R0-08-08-23.dwg' },
+  'NSIR': { code:'NSIR', name:'New Sirhind (NSIR)', type:'Junction Station', dfcKm:'1202.015', irKm:'-', points:'201 to 299', lines:'UP Main, DN Main, Multi-track Yard, NR Sirhind Chord', file:'NSIR_keyplan.png', dwg:'' },
+  'GVGN': { code:'GVGN', name:'New Mandi Gobindgarh (GVGN)', type:'Crossing Station', dfcKm:'1213.187', irKm:'-', points:'201 to 230', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), X-Over', file:'GVGN_keyplan.png', dwg:'ESP NEW MANDI GOBINDGARH LATEST.dwg' },
+  'KNNN': { code:'KNNN', name:'New Khanna (KNNN)', type:'Crossing Station', dfcKm:'1229.087', irKm:'-', points:'201 to 232', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), Overruns', file:'KNNN_keyplan.png', dwg:'NEW KHANNA (TRACING).dwg' },
+  'CHAN': { code:'CHAN', name:'New Chawa Pail (CHAN)', type:'Junction Station', dfcKm:'1235.837', irKm:'-', points:'201A to 260B', lines:'UP Main, DN Main, Loops 1-3 (750M CAL), Overrun Tracks', file:'CHAN_keyplan.png', dwg:'CHAWAPAIL AND NEW CHAWAPAIL_R5 (1).dwg' }
 };
 
 // -------------------------------------------------------------
@@ -2894,13 +2894,15 @@ function openStationEsp(stationCode) {
   `).join('');
 
   const keyplanUrl = `/static/keyplans/${stn.file}`;
+  const dwgUrl = stn.dwg ? `/static/esp/${encodeURIComponent(stn.dwg)}` : null;
 
   modalBody.innerHTML = `
     <div style="display:flex; flex-direction:column; height:100%; width:100%; background:#090d16;">
-      <div style="padding:0.35rem 0.8rem; background:#0b1222; border-bottom:1px solid #1e293b; display:flex; align-items:center; gap:0.4rem;">
+      <div style="padding:0.35rem 0.8rem; background:#0b1222; border-bottom:1px solid #1e293b; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
         <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">STATION:</span>
         ${tabsHtml}
         <div style="margin-left:auto; display:flex; gap:0.3rem;">
+          ${dwgUrl ? `<a href="${dwgUrl}" download="${stn.dwg}" class="btn-tool" style="background:#f59e0b; color:#000; font-weight:800;" title="Download AutoCAD .DWG Engineering Scale Plan">📐 Download CAD (.DWG)</a>` : ''}
           <a href="${keyplanUrl}" download="${stn.code}_Official_X-Ray_Keyplan.png" class="btn-tool" style="background:#0284c7; color:#fff;">📥 Download HD Plan</a>
           <a href="${keyplanUrl}" target="_blank" class="btn-tool" style="color:#38bdf8;">↗️ Full Tab</a>
         </div>
@@ -2909,7 +2911,7 @@ function openStationEsp(stationCode) {
         <img src="${keyplanUrl}" style="width:100%; height:100%; object-fit:contain; display:block;" alt="${stn.name}">
       </div>
       <div style="padding:0.3rem 0.8rem; background:#0b1222; border-top:1px solid #1e293b; font-size:0.72rem; color:#94a3b8; display:flex; justify-content:space-between;">
-        <span>⚡ <b>${stn.name}</b> | DFC Km: ${stn.dfcKm} | Points: ${stn.points}</span>
+        <span>⚡ <b>${stn.name}</b> | DFC Km: ${stn.dfcKm} | Points: ${stn.points} ${stn.dwg ? `| CAD: <b style="color:#f59e0b;">${stn.dwg}</b>` : ''}</span>
         <span>Drag / Pinch in new tab to zoom 500%</span>
       </div>
     </div>

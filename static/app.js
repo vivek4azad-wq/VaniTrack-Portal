@@ -914,7 +914,12 @@ const app = {
       </button>
     `).join('');
 
-    const encodedUrl = esp ? encodeURIComponent(`http://10.128.241.18:8080${esp.url}`) : '';
+    const origin = (window.location.origin && window.location.origin.startsWith('http')) 
+      ? window.location.origin 
+      : (window.location.protocol + '//' + window.location.host);
+    const espUrl = esp ? (esp.url || `/static/esp/${esp.filename}`) : '';
+    const absoluteEspUrl = esp ? (espUrl.startsWith('http') ? espUrl : `${origin}${espUrl}`) : '';
+    const encodedUrl = esp ? encodeURIComponent(absoluteEspUrl) : '';
     const shareCadUrl = esp ? `https://sharecad.org/cadframe/load?url=${encodedUrl}` : '';
 
     modalBody.innerHTML = `

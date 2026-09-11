@@ -214,9 +214,17 @@ async def refresh_database(request):
 
 async def media_handler(request):
     subpath = request.path_params['path']
+    import urllib.parse
+    subpath = urllib.parse.unquote(subpath)
     filepath = BASE_DIR / subpath
     if not filepath.exists() or not filepath.is_file():
-        return Response("File not found", status_code=404)
+        # Fallback to static/esp/ for CAD/ESP drawings
+        fname = Path(subpath).name
+        alt_esp = STATIC_DIR / 'esp' / fname
+        if alt_esp.exists() and alt_esp.is_file():
+            filepath = alt_esp
+        else:
+            return Response("File not found", status_code=404)
     
     ext = filepath.suffix.lower()
     content_type = "application/octet-stream"
