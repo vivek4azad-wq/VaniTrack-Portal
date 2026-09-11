@@ -1,0 +1,33 @@
+# OS & temporary files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+~$*
+
+# Large zip archives (>50MB / 100MB GitHub limit)
+*.zip
+*.tar.gz
+*.rar
+data/Store/Store/Sap master code data/
+
+# Python cache & virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Android build outputs & local config
+android-app/.gradle/
+android-app/build/
+android-app/*/build/
+android-app/local.properties
+android-app/.idea/
+android-app/*.iml

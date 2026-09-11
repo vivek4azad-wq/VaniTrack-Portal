@@ -1,0 +1,2846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VaniTrack Dual Workstation | Map + Linear Diagram</title>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Core Data -->
+  <script src="/static/map_data.js"></script>
+  <script src="/static/track_data.js"></script>
+  <script src="/static/track_10m_calibrated.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --bg-card: #0b1120;
+      --bg-card-alt: #0f172a;
+      --border-color: #1e293b;
+      --border-highlight: #334155;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --accent-green: #10b981;
+      --accent-gold: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      user-select: none;
+    }
+
+    /* Main Container */
+    #appWrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Master Toolbar */
+    .master-toolbar {
+      height: 46px;
+      min-height: 46px;
+      background: #090d16;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.75rem;
+      gap: 0.5rem;
+      z-index: 100;
+    }
+
+    .toolbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .toolbar-brand span.tag {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .toolbar-group::-webkit-scrollbar { display: none; }
+
+    .btn-tool {
+      background: #131b2e;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.28rem 0.6rem;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-tool:hover {
+      background: #1e293b;
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-tool.active {
+      background: #0284c7;
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+    .btn-tool.pill-stn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.22rem 0.5rem;
+    }
+
+    /* Workspace Body: Main Panes + Sidebar */
+    .workspace-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Center Dual Panes Area */
+    .panes-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Map Pane (Upper) */
+    .pane-map {
+      height: 50%;
+      width: 100%;
+      position: relative;
+      background: #060911;
+      overflow: hidden;
+      transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #mapView {
+      width: 100%;
+      height: 100%;
+      background: #080c16;
+    }
+
+    /* Floating map status badge */
+    .map-status-hud {
+      position: absolute;
+      top: 10px;
+      left: 55px;
+      z-index: 1000;
+      background: rgba(11, 17, 32, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .map-status-hud b { color: var(--accent); }
+
+    /* Pane Resizer / Divider */
+    .pane-divider {
+      height: 6px;
+      min-height: 6px;
+      background: #0f172a;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: row-resize;
+      z-index: 20;
+    }
+    .pane-divider::after {
+      content: '';
+      width: 36px;
+      height: 2px;
+      background: #475569;
+      border-radius: 1px;
+    }
+    .pane-divider:hover::after {
+      background: var(--accent);
+    }
+
+    /* Linear Diagram Pane (Lower) */
+    .pane-linear {
+      height: 50%;
+      width: 100%;
+      position: relative;
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .linear-mini-bar {
+      height: 28px;
+      min-height: 28px;
+      background: #090e1a;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.6rem;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .linear-viewport {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      background: #070b14;
+    }
+    .linear-viewport:active { cursor: grabbing; }
+
+    #linearCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Scrubber / Minimap at bottom of linear pane */
+    .scrubber-wrap {
+      height: 24px;
+      min-height: 24px;
+      background: #05080f;
+      border-top: 1px solid #1e293b;
+      position: relative;
+    }
+    #scrubberCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    /* Right KM Inspector Sidebar */
+    .inspector-sidebar {
+      width: 360px;
+      min-width: 320px;
+      max-width: 420px;
+      background: #080d18;
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 50;
+      transition: transform 0.25s ease, width 0.25s ease;
+    }
+    .inspector-sidebar.collapsed {
+      width: 0;
+      min-width: 0;
+      transform: translateX(100%);
+      border-left: none;
+    }
+
+    /* Sidebar Header & Search Box */
+    .sb-search-header {
+      padding: 0.75rem 0.85rem;
+      background: #0b1222;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .sb-search-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .sb-input-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .sb-input-wrap input {
+      width: 100%;
+      background: #060911;
+      border: 1.5px solid #334155;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      padding: 0.4rem 0.6rem 0.4rem 2.2rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .sb-input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .sb-input-wrap span.icon {
+      position: absolute;
+      left: 0.65rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .sb-search-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .sb-search-btn:hover { background: #0369a1; }
+
+    .sb-step-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.45rem;
+      gap: 0.35rem;
+    }
+    .sb-step-btn {
+      flex: 1;
+      background: #111a2e;
+      border: 1px solid #243452;
+      color: #cbd5e1;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.22rem 0.4rem;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .sb-step-btn:hover { background: #1e293b; color: #fff; }
+
+    /* Cards Content */
+    .sb-cards-list {
+      padding: 0.75rem 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sb-card {
+      background: #0b1222;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .sb-card-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sb-km-banner {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #0f172a, #090d16);
+      border: 1px solid #1e293b;
+      padding: 0.65rem 0.8rem;
+      border-radius: 6px;
+    }
+    .sb-km-main {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .sb-km-ir {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sb-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .sb-stat-box {
+      background: #060911;
+      border: 1px solid #1e293b;
+      border-radius: 5px;
+      padding: 0.45rem 0.6rem;
+    }
+    .sb-stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .sb-stat-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 0.15rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Staff Contact Box */
+    .sb-staff-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #060911;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 0.5rem 0.65rem;
+    }
+    .sb-staff-info { display: flex; flex-direction: column; gap: 0.1rem; }
+    .sb-staff-name { font-size: 0.82rem; font-weight: 700; color: #f8fafc; }
+    .sb-staff-sub { font-size: 0.68rem; color: var(--text-muted); }
+    .btn-call {
+      background: #10b981;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      transition: background 0.15s;
+    }
+    .btn-call:hover { background: #059669; }
+
+    /* Animated Map Pin Marker */
+    .train-pulse-pin {
+      position: relative;
+      width: 32px;
+      height: 32px;
+    }
+    .train-pulse-core {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px; height: 14px;
+      background: #38bdf8;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #38bdf8;
+    }
+    .train-pulse-pin::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 2px solid #38bdf8;
+      animation: pulseAnim 1.8s infinite ease-out;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(0.4); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .train-pin-badge {
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0284c7;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    .curve-badge-icon {
+      background: transparent !important;
+      border: none !important;
+    }
+    .curve-map-tooltip {
+      background: #090e1a !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
+    }
+
+    /* Prominent KM Milestone Badges on Map */
+    .km-milestone-marker {
+      background: transparent !important;
+      border: none !important;
+    }
+    .km-milestone-pill {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.94);
+      color: #e2e8f0;
+      border: 1px solid #38bdf8;
+      border-radius: 12px;
+      padding: 1px 5px 1px 4px;
+      font-size: 9.5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 5px rgba(56,189,248,0.3);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .km-milestone-pill:hover {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #ffffff;
+      transform: scale(1.12);
+      box-shadow: 0 3px 10px rgba(2,132,199,0.7);
+    }
+    .km-milestone-dot {
+      width: 5px;
+      height: 5px;
+      background: #38bdf8;
+      border-radius: 50%;
+      margin-right: 4px;
+      display: inline-block;
+    }
+    .km-milestone-pill.major {
+      background: rgba(14, 116, 144, 0.95);
+      border: 1.5px solid #a5f3fc;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.8), 0 0 8px rgba(34,211,238,0.5);
+    }
+    .km-milestone-pill.major .km-milestone-dot {
+      background: #a5f3fc;
+      box-shadow: 0 0 4px #a5f3fc;
+    }
+    .km-milestone-pill.link {
+      border-color: #ef4444;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 5px rgba(239,68,68,0.4);
+    }
+    .km-milestone-pill.link .km-milestone-dot {
+      background: #ef4444;
+    }
+
+    /* Official DFC Station Map Badge */
+    .station-marker-div {
+      background: transparent !important;
+      border: none !important;
+    }
+    .station-map-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(15, 23, 42, 0.96);
+      color: #fff;
+      border: 1.5px solid #ef4444;
+      border-radius: 6px;
+      padding: 2px 7px 2px 5px;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.5), 0 3px 8px rgba(0, 0, 0, 0.8);
+      font-family: 'JetBrains Mono', system-ui, sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .station-map-badge:hover {
+      background: #ef4444;
+      color: #fff;
+      transform: scale(1.08);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.85);
+    }
+    .station-map-badge .stn-dot {
+      width: 7px;
+      height: 7px;
+      background: #ef4444;
+      border: 1.5px solid #fff;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .station-map-badge:hover .stn-dot {
+      background: #fff;
+    }
+    .station-map-badge .stn-code {
+      font-weight: 800;
+      font-size: 10.5px;
+      letter-spacing: 0.5px;
+    }
+    .station-map-badge .stn-km {
+      font-size: 9px;
+      color: #94a3b8;
+      border-left: 1px solid #475569;
+      padding-left: 5px;
+    }
+    .station-map-badge:hover .stn-km {
+      color: #fee2e2;
+      border-left-color: rgba(255,255,255,0.4);
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-dialog {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      width: 95vw;
+      max-width: 1050px;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.8);
+    }
+    .modal-header {
+      padding: 0.6rem 1rem;
+      background: #0c1322;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-body { flex: 1; overflow: hidden; position: relative; }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.2rem 0.5rem;
+    }
+    .modal-close-btn:hover { color: #fff; }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .inspector-sidebar {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 320px;
+        box-shadow: -5px 0 20px rgba(0,0,0,0.6);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="appWrapper">
+  <!-- 1. Top Master Header & Toolbar -->
+  <header class="master-toolbar">
+    <div class="toolbar-brand">
+      <span>🚆 VaniTrack</span>
+      <span class="tag">Dual Workstation</span>
+    </div>
+
+      <!-- Quick Station Switcher Pills -->
+    <div class="toolbar-group">
+      <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700;">STATIONS:</span>
+      <button class="btn-tool pill-stn active" onclick="navigateToKm(1170.435, true, false)">SMUN</button>
+      <button class="btn-tool pill-stn" style="border-color:#ef4444; color:#f87171;" onclick="navigateToKm(1178.150, true, true)" title="Rajpura Junction (Link Line Chord Terminus KM 1178.150)">🔗 RPJ (1178.15)</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1188.575, true, false)">SBJN</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1202.015, true, false)">NSIR</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1213.187, true, false)">GVGN</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1229.087, true, false)">KNNN</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1235.837, true, false)">CHAN</button>
+      <button class="btn-tool pill-stn" onclick="navigateToKm(1249.700, true, false)">SNL</button>
+    </div>
+
+    <!-- View Modes & Actions -->
+    <div class="toolbar-group">
+      <button class="btn-tool active" id="btnViewSplit" onclick="setViewMode('split')" title="Split View (Map + Linear)">🔀 Split (50/50)</button>
+      <button class="btn-tool" id="btnViewMap" onclick="setViewMode('map')" title="Full Map View">🗺️ Full Map</button>
+      <button class="btn-tool" id="btnViewLinear" onclick="setViewMode('linear')" title="Full Diagram View">📏 Full Diagram</button>
+      <button class="btn-tool" onclick="openStationEsp(currentStationCode || 'SMUN')" style="background:#0284c7; color:#fff;" title="Open Official X-Ray Keyplans">⚡ X-Ray Plan</button>
+      <button class="btn-tool" id="btnToggleSidebar" onclick="toggleSidebar()" title="Toggle KM Inspector Sidebar">📋 Inspector</button>
+      <a href="/" class="btn-tool" style="background:#334155; color:#fff;">🏠 Portal</a>
+    </div>
+  </header>
+
+  <!-- 2. Workspace Body -->
+  <div class="workspace-body">
+    <!-- Center Panes: Map (Top) + Linear Diagram (Bottom) -->
+    <div class="panes-container" id="panesContainer">
+      <!-- 2A. Leaflet Map Pane -->
+      <div class="pane-map" id="mapPane">
+        <div id="mapView"></div>
+        <div class="map-status-hud">
+          <span>📍 Current Marker: <b id="hudMapKm">KM 1170.435</b></span>
+          <span id="hudMapGps" style="font-family:monospace; color:#94a3b8;">Lat: 30.43863°, Lon: 76.66772°</span>
+        </div>
+      </div>
+
+      <!-- 2B. Resizer Bar -->
+      <div class="pane-divider" id="paneDivider"></div>
+
+      <!-- 2C. Linear Diagram Pane -->
+      <div class="pane-linear" id="linearPane">
+        <div class="linear-mini-bar">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span>📏 <b>Track Plan & Longitudinal Profile</b></span>
+            <span style="color:#64748b;">|</span>
+            <span id="linearRangeTxt">KM 1167.0 to 1172.0 (5.0 km span)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <button class="btn-tool" onclick="zoomLinear(1.5)">🔍+</button>
+            <button class="btn-tool" onclick="zoomLinear(0.66)">🔍-</button>
+            <button class="btn-tool" onclick="fitAllLinear()">↔ Fit</button>
+          </div>
+        </div>
+
+        <div class="linear-viewport" id="linearViewport">
+          <canvas id="linearCanvas"></canvas>
+        </div>
+
+        <div class="scrubber-wrap">
+          <canvas id="scrubberCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side Pane: Instant KM Inspector -->
+    <aside class="inspector-sidebar" id="inspectorSidebar">
+      <!-- Search Box Header -->
+      <div class="sb-search-header">
+        <div class="sb-search-row">
+          <div class="sb-input-wrap">
+            <span class="icon">🔍</span>
+            <input type="number" step="0.1" id="kmSearchInput" placeholder="Enter KM e.g. 1175.5" onkeydown="if(event.key==='Enter') executeKmSearch()">
+          </div>
+          <button class="sb-search-btn" onclick="executeKmSearch()">GO</button>
+        </div>
+        <div class="sb-step-row">
+          <button class="sb-step-btn" onclick="stepKm(-0.5)">◀ -500m</button>
+          <button class="sb-step-btn" onclick="stepKm(-0.1)">◀ -100m</button>
+          <button class="sb-step-btn" onclick="stepKm(0.1)">+100m ▶</button>
+          <button class="sb-step-btn" onclick="stepKm(0.5)">+500m ▶</button>
+        </div>
+      </div>
+
+      <!-- Dynamic Cards -->
+      <div class="sb-cards-list">
+        <!-- 1. Chainage Banner -->
+        <div class="sb-km-banner">
+          <div>
+            <div class="sb-stat-label">DFC CHAINAGE</div>
+            <div class="sb-km-main" id="cardDfcKm">KM 1170.435</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="sb-stat-label">IR ESTIMATE</div>
+            <div class="sb-km-ir" id="cardIrKm">KM ~281.0</div>
+          </div>
+        </div>
+
+        <!-- 2. Geographic & GPS -->
+        <div class="sb-card">
+          <div class="sb-card-title">
+            <span>🗺️ GPS Coordinates</span>
+            <a id="cardGmapsLink" href="#" target="_blank" class="btn-tool" style="padding:0.15rem 0.4rem; font-size:0.65rem; color:#38bdf8;">Google Maps ↗</a>
+          </div>
+          <div class="sb-grid-2">
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">LATITUDE</div>
+              <div class="sb-stat-value" id="cardLat">30.443720°</div>
+            </div>
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">LONGITUDE</div>
+              <div class="sb-stat-value" id="cardLon">76.664420°</div>
+            </div>
+          </div>
+          <div style="font-size:0.72rem; color:var(--text-muted);" id="cardSectionName">Section: KNZN - SMUN</div>
+        </div>
+
+        <!-- 3. Civil & Profile Levels -->
+        <div class="sb-card">
+          <div class="sb-card-title">📐 Profile & Civil Levels</div>
+          <div class="sb-grid-2">
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">FORMATION LEVEL (PFL)</div>
+              <div class="sb-stat-value" style="color:#38bdf8;" id="cardPfl">268.450 m</div>
+            </div>
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">GROUND LEVEL (GL)</div>
+              <div class="sb-stat-value" style="color:#94a3b8;" id="cardGl">265.200 m</div>
+            </div>
+          </div>
+          <div class="sb-grid-2">
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">BANK / CUTTING</div>
+              <div class="sb-stat-value" style="color:#10b981;" id="cardBank">+3.25 m (Bank)</div>
+            </div>
+            <div class="sb-stat-box">
+              <div class="sb-stat-label">OFFICIAL GRADIENT</div>
+              <div class="sb-stat-value" style="color:#f59e0b;" id="cardGrad">1 in 3905 RISE</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Staff on Duty -->
+        <div class="sb-card">
+          <div class="sb-card-title">👷 Staff on Duty</div>
+          
+          <!-- Keyman -->
+          <div class="sb-staff-row">
+            <div class="sb-staff-info">
+              <span class="sb-stat-label">KEYMAN</span>
+              <span class="sb-staff-name" id="cardKeymanName">Prem Chand</span>
+              <span class="sb-staff-sub" id="cardKeymanBeat">Beat No. 1 (Km 1167.2 - 1173.0)</span>
+            </div>
+            <a id="cardKeymanCall" href="tel:" class="btn-call">📞 Call</a>
+          </div>
+
+          <!-- Patrolman -->
+          <div class="sb-staff-row">
+            <div class="sb-staff-info">
+              <span class="sb-stat-label">PATROLMAN</span>
+              <span class="sb-staff-name" id="cardPatrolmanName">Sukhwinder Singh</span>
+              <span class="sb-staff-sub" id="cardPatrolmanBeat">Beat No. 1 (Km 1167.2 - 1173.0)</span>
+            </div>
+            <a id="cardPatrolmanCall" href="tel:" class="btn-call">📞 Call</a>
+          </div>
+        </div>
+
+        <!-- 5. Track Assets & Structures -->
+        <div class="sb-card">
+          <div class="sb-card-title">🌉 Assets in this KM</div>
+          <div id="cardAssetsContent" style="display:flex; flex-direction:column; gap:0.4rem; font-size:0.75rem;">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- 6. Station & Yard Plans -->
+        <div class="sb-card" id="cardStationBox">
+          <div class="sb-card-title">🚉 Station & Signaling Plan</div>
+          <div id="cardStationContent" style="font-size:0.75rem; color:#cbd5e1; line-height:1.4;">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- 7. Plan & Profile Approved Sheet -->
+        <div class="sb-card">
+          <div class="sb-card-title">📜 Plan & Profile Drawing</div>
+          <div id="cardDrawingContent" style="font-size:0.75rem; color:#cbd5e1; line-height:1.4;">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Station ESP & X-Ray Plan Modal -->
+<div class="modal-backdrop" id="espModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="espModalTitle" style="font-size:1.05rem; font-weight:700;">⚡ Official Station X-Ray Keyplan</h3>
+      <button class="modal-close-btn" onclick="closeEspModal()">✕</button>
+    </div>
+    <div class="modal-body" id="espModalBody"></div>
+  </div>
+</div>
+
+<!-- Bridge Detail Inspector Modal -->
+<div class="modal-backdrop" id="bridgeModal">
+  <div class="modal-dialog" style="max-width: 680px; height: auto; max-height: 85vh;">
+    <div class="modal-header">
+      <h3 id="bridgeModalTitle" style="font-size:1.05rem; font-weight:700; color:#f59e0b;">🌉 Bridge Structural Specification</h3>
+      <button class="modal-close-btn" onclick="closeBridgeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="bridgeModalBody" style="overflow-y:auto; padding: 1.25rem;"></div>
+  </div>
+</div>
+
+<!-- Workstation Orchestrator Script -->
+<script>
+// Global State
+let DB_DATA = (typeof DB !== 'undefined' && DB.bridges) ? DB : ((typeof window !== 'undefined' && window.VANI_TRACK_DATA) ? window.VANI_TRACK_DATA : {});
+let MAP_ASSETS = typeof MAP_DATA !== 'undefined' ? MAP_DATA : {};
+
+let currentKm = 1170.435;
+let currentStationCode = 'SMUN';
+let viewMode = 'split'; // 'split', 'map', 'linear'
+let isLinkLineSelected = false; // Tracks whether currently inspecting SMUN-RPJ Link Line
+let bridgeHitboxes = [];
+let curveHitboxes = [];
+
+// Map variables
+let map = null;
+let livePinMarker = null;
+let trackPolyline = null;
+let parsedTrackCoords = []; // [(km, lat, lon)]
+
+// Linear Diagram variables
+let linearCanvas, linearCtx;
+let scrubberCanvas, scrubberCtx;
+let viewKmStart = 1168.0;
+let viewKmSpan = 5.0; // 5 km span
+const minCorridorKm = 1167.2;
+const maxCorridorKm = 1250.0;
+let isDraggingLinear = false;
+let dragStartX = 0, dragStartKm = 0;
+
+// Official Keyplan Stations Metadata
+const keyplanStations = {
+  'SMUN': { code:'SMUN', name:'New Shambhu (SMUN)', type:'Junction Station', dfcKm:'1170.435', irKm:'281.027', points:'201A to 297', lines:'UP Main, DN Main, Loops 1-4 (750M CAL), IR Chord', file:'SMUN_keyplan.png' },
+  'RPJ':  { code:'RPJ', name:'Rajpura Junction (RPJ)', type:'NR Interchange Junction', dfcKm:'1178.150', irKm:'288.7', points:'Northern Railway Chord Junction', lines:'DFC Link Line Chord, NR Ambala-Ludhiana, RPJ-Bathinda', file:'SMUN_keyplan.png' },
+  'SBJN': { code:'SBJN', name:'New Sarai Banjara (SBJN)', type:'Junction Station', dfcKm:'1188.575', irKm:'-', points:'201A to 289B', lines:'UP Main, DN Main, Loops 1-3, IR Connecting Track', file:'SBJN_keyplan.png' },
+  'NSIR': { code:'NSIR', name:'New Sirhind (NSIR)', type:'Junction Station', dfcKm:'1202.015', irKm:'-', points:'201 to 299', lines:'UP Main, DN Main, Multi-track Yard, NR Sirhind Chord', file:'NSIR_keyplan.png' },
+  'GVGN': { code:'GVGN', name:'New Mandi Gobindgarh (GVGN)', type:'Crossing Station', dfcKm:'1213.187', irKm:'-', points:'201 to 230', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), X-Over', file:'GVGN_keyplan.png' },
+  'KNNN': { code:'KNNN', name:'New Khanna (KNNN)', type:'Crossing Station', dfcKm:'1229.087', irKm:'-', points:'201 to 232', lines:'UP Main, DN Main, UP Loop (750M), DN Loop (750M), Overruns', file:'KNNN_keyplan.png' },
+  'CHAN': { code:'CHAN', name:'New Chawa Pail (CHAN)', type:'Junction Station', dfcKm:'1235.837', irKm:'-', points:'201A to 260B', lines:'UP Main, DN Main, Loops 1-3 (750M CAL), Overrun Tracks', file:'CHAN_keyplan.png' }
+};
+
+// -------------------------------------------------------------
+// 1. INITIALIZATION
+// -------------------------------------------------------------
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!DB_DATA || !DB_DATA.master_staff || !DB_DATA.master_staff.length) {
+    try {
+      const resp = await fetch('/api/database');
+      if (resp.ok) {
+        DB_DATA = await resp.json();
+      }
+    } catch(e) {
+      console.warn('Fallback loading DB:', e);
+    }
+  }
+  parseTrackPolyline();
+  initMap();
+  initLinearCanvases();
+  setupDividerResizing();
+  navigateToKm(1170.435);
+});
+
+function parseTrackPolyline() {
+  parsedTrackCoords = [];
+  if (typeof TRACK_10M_CALIBRATED !== 'undefined' && TRACK_10M_CALIBRATED.length) {
+    TRACK_10M_CALIBRATED.forEach(pt => {
+      parsedTrackCoords.push({ km: pt[0], lat: pt[1], lon: pt[2] });
+    });
+  } else if (MAP_ASSETS && MAP_ASSETS.track) {
+    MAP_ASSETS.track.forEach(pt => {
+      const lon = pt[0], lat = pt[1], tag = pt[2] || '';
+      const cleanTag = tag.replace('CH ', '').replace('+', '.');
+      const parts = tag.replace('CH ', '').split('+');
+      let kmVal = 0;
+      if (parts.length === 2) {
+        kmVal = parseFloat(parts[0]) + parseFloat(parts[1]) / 1000.0;
+      } else {
+        kmVal = parseFloat(cleanTag) || 0;
+      }
+      if (kmVal > 0) {
+        parsedTrackCoords.push({ km: kmVal, lat: lat, lon: lon });
+      }
+    });
+  }
+  parsedTrackCoords.sort((a, b) => a.km - b.km);
+}
+
+// Link Line Waypoints calibrated from SMUN to Rajpura Junction (RPJ KM 1178.150)
+const LINK_LINE_WAYPOINTS = [
+  { km: 1170.435, lat: 30.438625, lon: 76.667723, label: 'SMUN Station Center' },
+  { km: 1173.000, lat: 30.452486, lon: 76.645627, label: 'KM 1173 Takeoff Bifurcation' },
+  { km: 1174.865, lat: 30.462326, lon: 76.630132, label: 'Br. 1174/CL/1 (MIB / 105)' },
+  { km: 1175.238, lat: 30.464342, lon: 76.627038, label: 'Br. 1175/CL/1 (107)' },
+  { km: 1176.595, lat: 30.471548, lon: 76.615602, label: 'Br. 1176/CL/2 (111/112)' },
+  { km: 1176.771, lat: 30.472480, lon: 76.614116, label: 'Br. 1176/CL/3 (113/110)' },
+  { km: 1176.953, lat: 30.473805, lon: 76.612092, label: 'Br. 1177/CL/1 (115 OWG)' },
+  { km: 1177.635, lat: 30.480872, lon: 76.601755, label: 'Br. No. 117' },
+  { km: 1178.150, lat: 30.486043, lon: 76.593788, label: 'Rajpura Junction (RPJ Terminus)' }
+];
+
+function getLinkLineGps(targetKm) {
+  if (targetKm <= LINK_LINE_WAYPOINTS[0].km) return { lat: LINK_LINE_WAYPOINTS[0].lat, lon: LINK_LINE_WAYPOINTS[0].lon };
+  if (targetKm >= LINK_LINE_WAYPOINTS[LINK_LINE_WAYPOINTS.length - 1].km) {
+    const last = LINK_LINE_WAYPOINTS[LINK_LINE_WAYPOINTS.length - 1];
+    return { lat: last.lat, lon: last.lon };
+  }
+  for (let i = 0; i < LINK_LINE_WAYPOINTS.length - 1; i++) {
+    const p1 = LINK_LINE_WAYPOINTS[i];
+    const p2 = LINK_LINE_WAYPOINTS[i + 1];
+    if (p1.km <= targetKm && targetKm <= p2.km) {
+      const span = p2.km - p1.km || 0.001;
+      const ratio = Math.max(0, Math.min(1, (targetKm - p1.km) / span));
+      return {
+        lat: p1.lat + ratio * (p2.lat - p1.lat),
+        lon: p1.lon + ratio * (p2.lon - p1.lon)
+      };
+    }
+  }
+  return { lat: LINK_LINE_WAYPOINTS[0].lat, lon: LINK_LINE_WAYPOINTS[0].lon };
+}
+
+function getLinkLineProjection(clickLat, clickLon) {
+  // Use bifurcation segment from 1173.000 takeoff to 1178.150 RPJ
+  const segWaypoints = LINK_LINE_WAYPOINTS.slice(1);
+  let minDist = Infinity;
+  let bestKm = 1173.000;
+  let bestLat = segWaypoints[0].lat;
+  let bestLon = segWaypoints[0].lon;
+
+  for (let i = 0; i < segWaypoints.length - 1; i++) {
+    const a = segWaypoints[i];
+    const b = segWaypoints[i + 1];
+    const ax = a.lon, ay = a.lat;
+    const bx = b.lon, by = b.lat;
+    const px = clickLon, py = clickLat;
+    const dx = bx - ax, dy = by - ay;
+    const l2 = dx * dx + dy * dy;
+    let t = 0;
+    if (l2 > 0) {
+      t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+    }
+    const projLat = ay + t * dy;
+    const projLon = ax + t * dx;
+    const dist = Math.hypot(clickLat - projLat, clickLon - projLon);
+    if (dist < minDist) {
+      minDist = dist;
+      bestKm = a.km + t * (b.km - a.km);
+      bestLat = projLat;
+      bestLon = projLon;
+    }
+  }
+  return { km: bestKm, lat: bestLat, lon: bestLon, dist: minDist };
+}
+
+function getInterpolatedGps(targetKm) {
+  if (!parsedTrackCoords.length) {
+    return { lat: 30.44372, lon: 76.66442 };
+  }
+  if (targetKm <= parsedTrackCoords[0].km) {
+    return { lat: parsedTrackCoords[0].lat, lon: parsedTrackCoords[0].lon };
+  }
+  const last = parsedTrackCoords[parsedTrackCoords.length - 1];
+  if (targetKm >= last.km) {
+    return { lat: last.lat, lon: last.lon };
+  }
+  
+  // Binary search for rapid 10m lookup
+  let low = 0, high = parsedTrackCoords.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (parsedTrackCoords[mid].km < targetKm) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  const idx = Math.max(0, Math.min(parsedTrackCoords.length - 2, high));
+  const p1 = parsedTrackCoords[idx];
+  const p2 = parsedTrackCoords[idx + 1];
+  const span = p2.km - p1.km || 0.001;
+  const ratio = Math.max(0, Math.min(1, (targetKm - p1.km) / span));
+  return {
+    lat: p1.lat + ratio * (p2.lat - p1.lat),
+    lon: p1.lon + ratio * (p2.lon - p1.lon)
+  };
+}
+
+// -------------------------------------------------------------
+// 2. LEAFLET MAP INTEGRATION
+// -------------------------------------------------------------
+function initMap() {
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap'
+  });
+  const googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 21,
+    attribution: '© Google Maps'
+  });
+  const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 20,
+    maxNativeZoom: 18,
+    attribution: 'Esri, Maxar, Earthstar Geographics'
+  });
+
+  map = L.map('mapView', {
+    center: [30.438625, 76.667723],
+    zoom: 14,
+    maxZoom: 20,
+    layers: [googleHybrid]
+  });
+
+  // Track alignment line
+  const latlngs = parsedTrackCoords.map(p => [p.lat, p.lon]);
+  trackPolyline = L.polyline(latlngs, {
+    color: '#38bdf8',
+    weight: 4.5,
+    opacity: 0.85
+  }).addTo(map);
+
+  // Click on polyline jumps to that KM on Main Line
+  trackPolyline.on('click', (e) => {
+    const clickLat = e.latlng.lat;
+    const clickLon = e.latlng.lng;
+    let closestKm = 1170.435;
+    let minDist = 999999;
+    parsedTrackCoords.forEach(p => {
+      const d = Math.hypot(p.lat - clickLat, p.lon - clickLon);
+      if (d < minDist) { minDist = d; closestKm = p.km; }
+    });
+    navigateToKm(closestKm, false, false);
+  });
+
+  // KM Markers Layer - Prominent, readable KM milestone badges along track
+  const kmMarkersGroup = L.layerGroup();
+  
+  // 1. Generate Main Line KM milestones for every integer KM from 1165 to 1250
+  if (parsedTrackCoords.length > 0) {
+    const minTrackKm = Math.ceil(parsedTrackCoords[0].km);
+    const maxTrackKm = Math.floor(parsedTrackCoords[parsedTrackCoords.length - 1].km);
+
+    for (let k = minTrackKm; k <= maxTrackKm; k++) {
+      // Find closest track coordinate for integer KM k
+      let closestPt = parsedTrackCoords[0];
+      let minDiff = 999999;
+      for (let i = 0; i < parsedTrackCoords.length; i++) {
+        const diff = Math.abs(parsedTrackCoords[i].km - k);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestPt = parsedTrackCoords[i];
+          if (diff < 0.005) break; // close enough
+        }
+      }
+
+      const isDeca = (k % 5 === 0);
+      const kmPillIcon = L.divIcon({
+        className: 'km-milestone-marker',
+        html: `
+          <div class="km-milestone-pill ${isDeca ? 'major' : ''}" title="KM ${k} - Click to Inspect">
+            <span class="km-milestone-dot"></span>
+            <span>KM ${k}</span>
+          </div>
+        `,
+        iconSize: [isDeca ? 64 : 58, 20],
+        iconAnchor: [isDeca ? 32 : 29, 10]
+      });
+
+      const m = L.marker([closestPt.lat, closestPt.lon], { icon: kmPillIcon });
+      m.bindTooltip(`<b>DFC Chainage: KM ${k}.000</b><br>Lat: ${closestPt.lat.toFixed(5)}, Lon: ${closestPt.lon.toFixed(5)}<br><i>Click to inspect in Linear Diagram & Sidebar</i>`, {
+        direction: 'top',
+        offset: [0, -10]
+      });
+      m.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        navigateToKm(k, true, false);
+      });
+      kmMarkersGroup.addLayer(m);
+    }
+  }
+
+  // 2. Add Link Line KM milestones (KM 1174, 1175, 1176, 1177, 1178)
+  LINK_LINE_WAYPOINTS.forEach(wp => {
+    const kRound = Math.round(wp.km);
+    if (wp.km >= 1173.0 && Math.abs(wp.km - kRound) < 0.2) {
+      const linkPillIcon = L.divIcon({
+        className: 'km-milestone-marker',
+        html: `
+          <div class="km-milestone-pill link" title="Link Line KM ${wp.km.toFixed(1)}">
+            <span class="km-milestone-dot"></span>
+            <span>KM ${wp.km.toFixed(1)}</span>
+          </div>
+        `,
+        iconSize: [68, 20],
+        iconAnchor: [34, 10]
+      });
+      const lm = L.marker([wp.lat, wp.lon], { icon: linkPillIcon });
+      lm.bindTooltip(`<b>Link Line: KM ${wp.km.toFixed(3)}</b><br>${wp.label}<br><i>Click to inspect</i>`, { direction: 'top', offset: [0, -10] });
+      lm.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        navigateToKm(wp.km, true, true, { lat: wp.lat, lon: wp.lon });
+      });
+      kmMarkersGroup.addLayer(lm);
+    }
+  });
+
+  kmMarkersGroup.addTo(map);
+
+  // Bridges Layer (Excluding Link Line Bridges: 105, 107, 111, 113, 115, 117)
+  const bridgeGroup = L.layerGroup();
+  const linkBridgeGroup = L.layerGroup();
+  const linkBridgeNumbers = ['105', '107', '111', '113', '115', '117'];
+  const linkBridgeToDfc = {
+    '105': '1174/cl/1',
+    '107': '1175/cl/1',
+    '111': '1176/cl/2',
+    '113': '1176/cl/3',
+    '115': '1177/cl/1',
+    'mib': '1174/cl/1'
+  };
+
+  const bridgeIcon = L.divIcon({
+    html: '<div style="background:#f59e0b; width:9px; height:9px; border:1.5px solid #000; border-radius:2px; box-shadow:0 0 4px #f59e0b; cursor:pointer;"></div>',
+    iconSize: [9, 9],
+    iconAnchor: [4.5, 4.5]
+  });
+
+  const linkBridgeIcon = L.divIcon({
+    html: '<div style="background:#ef4444; width:9px; height:9px; border:1.5px solid #fff; border-radius:2px; box-shadow:0 0 6px #ef4444; cursor:pointer;"></div>',
+    iconSize: [9, 9],
+    iconAnchor: [4.5, 4.5]
+  });
+
+  // Index DB bridges by old_bridge_no and bridge_no
+  const dbBridgeMap = {};
+  (DB_DATA.bridges || []).forEach(b => {
+    if (b.old_bridge_no) dbBridgeMap[b.old_bridge_no.toString().trim().toLowerCase()] = b;
+    if (b.bridge_no) dbBridgeMap[b.bridge_no.toString().trim().toLowerCase()] = b;
+  });
+
+  if (MAP_ASSETS.bridges) {
+    MAP_ASSETS.bridges.forEach(b => {
+      const cleanNum = b.name.replace('Br. No.', '').replace('Br. No', '').replace('Bridge', '').trim().toLowerCase();
+      const isLinkBridge = linkBridgeNumbers.includes(cleanNum);
+      const dfcKey = linkBridgeToDfc[cleanNum];
+      const matchedDb = (isLinkBridge && dfcKey && dbBridgeMap[dfcKey]) ? dbBridgeMap[dfcKey] : (dbBridgeMap[cleanNum] || null);
+
+      // Choose icon and target layer
+      const targetIcon = isLinkBridge ? linkBridgeIcon : bridgeIcon;
+      const m = L.marker([b.lat, b.lon], { icon: targetIcon });
+      
+      let popupHtml = `<div style="font-family:sans-serif; min-width:180px;">`;
+      if (isLinkBridge) {
+        popupHtml += `
+          <div style="background:#ef4444; color:#fff; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">
+            🔗 LINK LINE ASSET (Rajpura Chord)
+          </div><br>
+        `;
+      }
+      if (matchedDb) {
+        popupHtml += `
+          <b style="color:${isLinkBridge ? '#ef4444' : '#0284c7'}; font-size:0.9rem;">🌉 DFC Br. ${matchedDb.bridge_no}</b><br>
+          <span style="font-size:0.75rem; color:#64748b;">(Old: ${b.name} | Section: ${matchedDb.section || 'SMUN-RPJ Link Line'})</span>
+          <div style="margin:4px 0; font-size:0.75rem;">
+            <b>Chainage:</b> DFC Km ${matchedDb.km_from}<br>
+            <b>Type:</b> ${matchedDb.bridge_type} (${matchedDb.category || 'Standard'})<br>
+            <b>Span:</b> ${matchedDb.span_config || 'N/A'}<br>
+            <b>Length:</b> ${matchedDb.length || 'N/A'} m
+          </div>
+          <button style="margin-top:6px; width:100%; padding:3px 8px; background:${isLinkBridge ? '#ef4444' : '#0284c7'}; color:#fff; border:none; border-radius:4px; font-weight:700; cursor:pointer; font-size:0.72rem;" onclick="openBridgeModal('${matchedDb.bridge_no}')">
+            🔍 View Full Bridge Specs
+          </button>
+        `;
+      } else {
+        popupHtml += `
+          <b style="color:${isLinkBridge ? '#ef4444' : '#0284c7'};">${b.name} ${isLinkBridge ? '(Link Line)' : ''}</b><br>
+          <span style="font-size:0.75rem;">${b.desc || ''}</span>
+        `;
+      }
+      popupHtml += `</div>`;
+
+      m.bindPopup(popupHtml);
+      m.on('click', () => {
+        if (matchedDb) {
+          navigateToKm(parseFloat(matchedDb.km_from) || currentKm, false, isLinkBridge, isLinkBridge ? { lat: b.lat, lon: b.lon } : null);
+        } else if (isLinkBridge) {
+          const res = getLinkLineProjection(b.lat, b.lon);
+          navigateToKm(res.km, false, true, { lat: b.lat, lon: b.lon });
+        }
+      });
+
+      if (isLinkBridge) {
+        linkBridgeGroup.addLayer(m);
+      } else {
+        bridgeGroup.addLayer(m);
+      }
+    });
+  }
+  bridgeGroup.addTo(map);
+
+  // Link Line Bifurcation Layer (Straight Red Line from SMUN KM 1173 to Link Line Assets & Rajpura Jn)
+  const linkLineGroup = L.layerGroup();
+  const bifurcationCoords = [
+    [30.452486, 76.645627], // SMUN KM 1173 Bifurcation Takeoff Point
+    [30.462326, 76.630132], // Br. No. 105 (1174/CL/1)
+    [30.464342, 76.627038], // Br. No. 107 (1175/CL/1)
+    [30.471548, 76.615602], // Br. No. 111 (1176/CL/2)
+    [30.472480, 76.614116], // Br. No. 113 (1176/CL/3)
+    [30.473805, 76.612092], // Br. No. 115 (1177/CL/1)
+    [30.480872, 76.601755], // Br. No. 117
+    [30.486043, 76.593788]  // Rajpura Jn (RPJ) Terminus
+  ];
+
+  const linkLinePolyline = L.polyline(bifurcationCoords, {
+    color: '#ef4444',
+    weight: 4.5,
+    dashArray: '8, 6',
+    opacity: 0.95,
+    cursor: 'pointer'
+  }).addTo(linkLineGroup);
+
+  // Interactive Hover & Click Listener on Link Line for accurate Chainage Calculation
+  linkLinePolyline.on('mouseover', function() {
+    this.setStyle({ weight: 7, opacity: 1.0 });
+  });
+  linkLinePolyline.on('mouseout', function() {
+    this.setStyle({ weight: 4.5, opacity: 0.95 });
+  });
+  linkLinePolyline.on('click', (e) => {
+    const clickLat = e.latlng.lat;
+    const clickLon = e.latlng.lng;
+    const res = getLinkLineProjection(clickLat, clickLon);
+    navigateToKm(res.km, false, true, { lat: res.lat, lon: res.lon });
+
+    L.popup({ autoClose: true, closeOnClick: true })
+      .setLatLng([res.lat, res.lon])
+      .setContent(`
+        <div style="font-family:sans-serif; min-width:180px; padding:2px;">
+          <div style="background:#ef4444; color:#fff; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">
+            🔗 SMUN - RPJ LINK LINE (DFC Chord)
+          </div><br>
+          <span style="font-size:1.05rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono',monospace;">
+            KM ${res.km.toFixed(3)}
+          </span>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:4px; line-height:1.4;">
+            <b>Section:</b> SMUN-RPJ (Single Line DFC)<br>
+            <b>Terminus:</b> Rajpura Jn (KM 1178.150)<br>
+            <b>GPS:</b> ${res.lat.toFixed(5)}° N, ${res.lon.toFixed(5)}° E
+          </div>
+        </div>
+      `)
+      .openOn(map);
+  });
+
+  // Takeoff Marker at KM 1173
+  const takeoffIcon = L.divIcon({
+    html: '<div style="background:#ef4444; color:#fff; font-size:9px; font-weight:800; padding:2px 5px; border-radius:3px; border:1px solid #fff; box-shadow:0 0 8px rgba(239,68,68,0.8); white-space:nowrap; cursor:pointer;">⚡ KM 1173 LINK BIFURCATION</div>',
+    iconSize: [140, 22],
+    iconAnchor: [70, 11]
+  });
+  const takeoffMarker = L.marker([30.452486, 76.645627], { icon: takeoffIcon }).addTo(linkLineGroup);
+  takeoffMarker.bindPopup(`
+    <div style="font-family:sans-serif; min-width:190px;">
+      <div style="background:#ef4444; color:#fff; font-size:0.68rem; font-weight:700; padding:2px 5px; border-radius:3px; display:inline-block; margin-bottom:4px;">
+        ⚡ BIFURCATION TAKEOFF
+      </div><br>
+      <b>SMUN Link Line Bifurcation Point</b><br>
+      <span style="font-size:0.75rem; color:#64748b;">Takeoff Chainage: DFC KM 1173.000<br>Connecting Track to Rajpura Jn (RPJ KM 1178.150)</span>
+      <button style="margin-top:6px; width:100%; padding:3px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; font-weight:700; cursor:pointer; font-size:0.72rem;" onclick="navigateToKm(1173.000, true, true)">
+        ⚡ Inspect KM 1173.000 Takeoff
+      </button>
+    </div>
+  `);
+  takeoffMarker.on('click', () => {
+    navigateToKm(1173.000, true, true, { lat: 30.452486, lon: 76.645627 });
+  });
+
+  // Rajpura Junction (RPJ Terminus) Marker at KM 1178.150
+  const rpjIcon = L.divIcon({
+    html: '<div style="background:#ef4444; color:#fff; font-size:9.5px; font-weight:800; padding:3px 7px; border-radius:4px; border:1.5px solid #fff; box-shadow:0 0 10px rgba(239,68,68,0.9); white-space:nowrap; cursor:pointer;">🏢 RAJPURA JN (RPJ) KM 1178.150</div>',
+    iconSize: [165, 24],
+    iconAnchor: [82, 12]
+  });
+  const rpjMarker = L.marker([30.486043, 76.593788], { icon: rpjIcon }).addTo(linkLineGroup);
+  rpjMarker.bindPopup(`
+    <div style="font-family:sans-serif; min-width:200px;">
+      <div style="background:#ef4444; color:#fff; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">
+        🏢 TERMINUS STATION
+      </div><br>
+      <b style="font-size:0.95rem; color:#ef4444;">Rajpura Junction (RPJ)</b><br>
+      <div style="font-size:0.75rem; color:#64748b; margin-top:4px; line-height:1.4;">
+        <b>DFC Chainage:</b> KM 1178.150<br>
+        <b>Section:</b> SMUN-RPJ (Single Line Link Line)<br>
+        <b>Interchange:</b> Northern Railway (NR Main Lines)
+      </div>
+      <button style="margin-top:6px; width:100%; padding:4px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; font-weight:700; cursor:pointer; font-size:0.72rem;" onclick="navigateToKm(1178.150, true, true)">
+        ⚡ Inspect RPJ Terminus (1178.150)
+      </button>
+    </div>
+  `);
+  rpjMarker.on('click', () => {
+    navigateToKm(1178.150, true, true, { lat: 30.486043, lon: 76.593788 });
+  });
+
+  linkLineGroup.addTo(map);
+
+  // DFC Stations Layer - Synchronized with Exact Station Chainages & Calibrated Track Coordinates
+  const stnGroup = L.layerGroup();
+  
+  // Official Station List matching user chainages
+  const officialStationList = [
+    { code: 'SMUN', name: 'New Shambhu (SMUN)', km: 1170.435, type: 'Junction Station' },
+    { code: 'SBJN', name: 'New Sarai Banjara (SBJN)', km: 1188.575, type: 'Junction Station' },
+    { code: 'NSIR', name: 'New Sirhind (NSIR)', km: 1202.015, type: 'Junction Station' },
+    { code: 'GVGN', name: 'New Mandi Gobindgarh (GVGN)', km: 1213.187, type: 'Crossing Station' },
+    { code: 'KNNN', name: 'New Khanna (KNNN)', km: 1229.087, type: 'Crossing Station' },
+    { code: 'CHAN', name: 'New Chawa Pail (CHAN)', km: 1235.837, type: 'Junction Station' },
+    { code: 'SNL',  name: 'New Sanehwal (SNL)', km: 1249.700, type: 'Junction Station' }
+  ];
+
+  officialStationList.forEach(stn => {
+    // Get exact GPS along the calibrated track at stn.km
+    const stnGps = getInterpolatedGps(stn.km);
+
+    const stnBadgeIcon = L.divIcon({
+      className: 'station-marker-div',
+      html: `
+        <div class="station-map-badge" title="${stn.name} (KM ${stn.km.toFixed(3)}) - Click to Inspect">
+          <span class="stn-dot"></span>
+          <span class="stn-code">${stn.code}</span>
+          <span class="stn-km">KM ${stn.km.toFixed(1)}</span>
+        </div>
+      `,
+      iconSize: [110, 26],
+      iconAnchor: [55, 13]
+    });
+
+    const m = L.marker([stnGps.lat, stnGps.lon], { icon: stnBadgeIcon, zIndexOffset: 1200 });
+
+    const popupHtml = `
+      <div style="font-family:system-ui,-apple-system,sans-serif; min-width:205px; padding:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:6px;">
+          <b style="color:#ef4444; font-size:13px;">🏢 ${stn.name}</b>
+        </div>
+        <div style="font-size:11.5px; line-height:1.5; color:#cbd5e1;">
+          <b>Station Code:</b> <span style="color:#38bdf8; font-weight:700;">${stn.code}</span><br>
+          <b>DFC Chainage:</b> <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#f8fafc;">KM ${stn.km.toFixed(3)}</span><br>
+          <b>Station Type:</b> ${stn.type}<br>
+          <b>GPS:</b> ${stnGps.lat.toFixed(5)}° N, ${stnGps.lon.toFixed(5)}° E
+        </div>
+        <div style="display:flex; gap:5px; margin-top:8px;">
+          <button style="flex:1; padding:4px 6px; background:#0284c7; color:#fff; border:none; border-radius:4px; font-weight:700; font-size:11px; cursor:pointer;" onclick="openStationEsp('${stn.code}')">
+            ⚡ X-Ray Plan
+          </button>
+          <button style="flex:1; padding:4px 6px; background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:4px; font-weight:700; font-size:11px; cursor:pointer;" onclick="navigateToKm(${stn.km}, true, false)">
+            🎯 Focus KM
+          </button>
+        </div>
+      </div>
+    `;
+
+    m.bindPopup(popupHtml);
+    m.on('click', () => {
+      navigateToKm(stn.km, true, false);
+    });
+    stnGroup.addLayer(m);
+  });
+
+  stnGroup.addTo(map);
+
+  // Curves Layer (वक्र / Curves on Main Line)
+  const curveGroup = L.layerGroup();
+  const curvesList = DB_DATA.curves || [];
+
+  curvesList.forEach(c => {
+    const kFrom = parseFloat(c.km_from);
+    const kTo = parseFloat(c.km_to);
+    if (isNaN(kFrom) || isNaN(kTo)) return;
+
+    // Filter matching coordinates along calibrated track
+    const curvePts = parsedTrackCoords.filter(p => p.km >= (kFrom - 0.005) && p.km <= (kTo + 0.005));
+    if (curvePts.length < 2) return;
+
+    const cLatLngs = curvePts.map(p => [p.lat, p.lon]);
+    const radius = parseFloat(c.radius || c.radius_tms || 0);
+    const isSharp = radius > 0 && radius <= 800;
+    const curveColor = isSharp ? '#f59e0b' : '#c084fc'; // Amber for sharp R<=800m, Purple for wider
+
+    const cPoly = L.polyline(cLatLngs, {
+      color: curveColor,
+      weight: 6,
+      opacity: 0.88,
+      lineCap: 'round',
+      lineJoin: 'round'
+    });
+
+    const midIdx = Math.floor(curvePts.length / 2);
+    const midPt = curvePts[midIdx];
+
+    // Tooltip
+    cPoly.bindTooltip(`<b>Curve C-${c.curve_no}</b> | R=${radius}m (${c.degree || ''}°), L=${c.length}m`, {
+      sticky: true,
+      direction: 'top',
+      className: 'curve-map-tooltip'
+    });
+
+    // Rich Detailed Popup
+    const popupHtml = `
+      <div style="font-family:system-ui,-apple-system,sans-serif; min-width:215px; color:#f8fafc; padding:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:6px;">
+          <span style="font-weight:700; color:${curveColor}; font-size:13px;">🔄 Curve No. ${c.curve_no}</span>
+          <span style="background:${isSharp ? 'rgba(245,158,11,0.2)' : 'rgba(192,132,252,0.2)'}; color:${curveColor}; border:1px solid ${curveColor}; border-radius:4px; padding:1px 5px; font-size:10px; font-weight:700;">
+            R = ${radius}m
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:3px 8px; font-size:11.5px; line-height:1.4;">
+          <span style="color:#94a3b8;">Chainage:</span> <span style="font-weight:600;">KM ${kFrom.toFixed(3)} - ${kTo.toFixed(3)}</span>
+          <span style="color:#94a3b8;">Length (L):</span> <span>${c.length} m</span>
+          <span style="color:#94a3b8;">Degree:</span> <span>${c.degree || '--'}°</span>
+          <span style="color:#94a3b8;">Permitted Speed:</span> <span>${c.speed || '--'} km/h</span>
+          <span style="color:#94a3b8;">Transition (TL):</span> <span>${c.transition_length || 0} m</span>
+          <span style="color:#94a3b8;">Circular (CL):</span> <span>${c.circular_length || 0} m</span>
+          <span style="color:#94a3b8;">Cant (SE):</span> <span>${c.cant_se || '--'} mm</span>
+        </div>
+        ${c.remarks ? `<div style="margin-top:6px; font-size:11px; color:#cbd5e1; background:#0f172a; padding:4px 6px; border-radius:4px; border-left:2px solid ${curveColor};">${c.remarks}</div>` : ''}
+        <button onclick="navigateToKm(${(kFrom + kTo) / 2}, true)" style="margin-top:7px; width:100%; background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:4px; padding:3px 0; font-size:11px; cursor:pointer; font-weight:600;">
+          ⚡ Focus in Linear Diagram ➔
+        </button>
+      </div>
+    `;
+
+    // Click on curved track jumps to the EXACT clicked KM just like straight track
+    cPoly.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      const clickLat = e.latlng.lat;
+      const clickLon = e.latlng.lng;
+      let closestKm = (kFrom + kTo) / 2;
+      let minDist = 999999;
+      parsedTrackCoords.forEach(p => {
+        const d = Math.hypot(p.lat - clickLat, p.lon - clickLon);
+        if (d < minDist) { minDist = d; closestKm = p.km; }
+      });
+      navigateToKm(closestKm, false, false);
+    });
+
+    curveGroup.addLayer(cPoly);
+
+    // Subtle curve apex badge marker on map with click popup
+    const badgeIcon = L.divIcon({
+      html: `<div style="background:#0f172a; color:${curveColor}; border:1px solid ${curveColor}; border-radius:3px; padding:0 3px; font-size:9px; font-weight:700; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.8); cursor:pointer;">C-${c.curve_no}</div>`,
+      className: 'curve-badge-icon',
+      iconSize: [28, 14],
+      iconAnchor: [14, 7]
+    });
+    const badgeMarker = L.marker([midPt.lat, midPt.lon], { icon: badgeIcon });
+    badgeMarker.bindPopup(popupHtml);
+    badgeMarker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      navigateToKm((kFrom + kTo) / 2, false, false);
+    });
+    curveGroup.addLayer(badgeMarker);
+  });
+
+  curveGroup.addTo(map);
+
+  // Allow clicking anywhere near the track (within ~150m) to jump to closest chainage
+  map.on('click', (e) => {
+    if (!parsedTrackCoords.length) return;
+    const clickLat = e.latlng.lat;
+    const clickLon = e.latlng.lng;
+    let closestKm = null;
+    let minDist = 999999;
+    parsedTrackCoords.forEach(p => {
+      const d = Math.hypot(p.lat - clickLat, p.lon - clickLon);
+      if (d < minDist) { minDist = d; closestKm = p.km; }
+    });
+    // 0.002 degrees is approx 200m
+    if (minDist < 0.0025 && closestKm !== null) {
+      navigateToKm(closestKm, false, false);
+    }
+  });
+
+  // Synchronized Train Pin Marker
+  const trainPinIcon = L.divIcon({
+    className: '',
+    html: '<div class="train-pulse-pin"><span class="train-pulse-core"></span><span class="train-pin-badge" id="mapPinBadge">1170.4</span></div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+  livePinMarker = L.marker([30.438625, 76.667723], {
+    icon: trainPinIcon,
+    zIndexOffset: 1500
+  }).addTo(map);
+
+  // Layer Controls
+  const baseMaps = { 
+    "Google Satellite (HD)": googleHybrid,
+    "Esri Satellite": esriSatellite, 
+    "OpenStreetMap": osm 
+  };
+  const overlays = { 
+    "Main Track": trackPolyline, 
+    "Curves / वक्र": curveGroup,
+    "Main Line Bridges": bridgeGroup, 
+    "Link Line (KM 1173 Bifurcation)": linkLineGroup,
+    "Link Line Bridges (105-117)": linkBridgeGroup,
+    "KM Milestones": kmMarkersGroup, 
+    "Stations": stnGroup 
+  };
+  L.control.layers(baseMaps, overlays, { position: 'topright' }).addTo(map);
+}
+
+function openStationEspFromMap(name) {
+  const code = getStationCodeByName(name);
+  openStationEsp(code);
+}
+
+function getStationCodeByName(name) {
+  const n = (name || '').toUpperCase();
+  if (n.includes('SHAMBHU') || n.includes('SMUN')) return 'SMUN';
+  if (n.includes('BANJARA') || n.includes('SBJN')) return 'SBJN';
+  if (n.includes('SIRHIND') || n.includes('NSIR')) return 'NSIR';
+  if (n.includes('GOBINDGARH') || n.includes('GVGN')) return 'GVGN';
+  if (n.includes('KHANNA') || n.includes('KNNN')) return 'KNNN';
+  if (n.includes('CHAWA') || n.includes('CHAN')) return 'CHAN';
+  return 'SMUN';
+}
+
+// -------------------------------------------------------------
+// 3. SYNCHRONIZATION ENGINE & KM INSPECTOR
+// -------------------------------------------------------------
+function navigateToKm(km, panMap = true, isLinkLine = null, explicitGps = null) {
+  if (isLinkLine !== null) {
+    isLinkLineSelected = !!isLinkLine;
+  }
+  if (isLinkLineSelected) {
+    km = Math.max(1170.435, Math.min(1178.150, km));
+  } else {
+    km = Math.max(minCorridorKm, Math.min(maxCorridorKm, km));
+  }
+  currentKm = km;
+
+  // 1. Update Linear Diagram Viewport
+  viewKmStart = km - viewKmSpan / 2;
+  renderLinearDiagram();
+  renderScrubber();
+
+  // 2. Update Map Live Pin
+  let gps;
+  if (explicitGps && explicitGps.lat && explicitGps.lon) {
+    gps = explicitGps;
+  } else if (isLinkLineSelected) {
+    gps = getLinkLineGps(km);
+  } else {
+    gps = getInterpolatedGps(km);
+  }
+
+  if (livePinMarker) {
+    livePinMarker.setLatLng([gps.lat, gps.lon]);
+    const badge = document.getElementById('mapPinBadge');
+    if (badge) badge.textContent = isLinkLineSelected ? `${km.toFixed(1)} (Link)` : km.toFixed(1);
+  }
+  if (map && panMap) {
+    map.panTo([gps.lat, gps.lon], { animate: true, duration: 0.35 });
+  }
+
+  // 3. Update HUD labels
+  const hudKm = document.getElementById('hudMapKm');
+  const hudGps = document.getElementById('hudMapGps');
+  if (hudKm) hudKm.innerHTML = isLinkLineSelected ? `KM ${km.toFixed(3)} <span style="color:#ef4444; font-size:0.75rem; font-weight:800;">[LINK LINE]</span>` : `KM ${km.toFixed(3)}`;
+  if (hudGps) hudGps.textContent = `Lat: ${gps.lat.toFixed(5)}°, Lon: ${gps.lon.toFixed(5)}°`;
+
+  // 4. Update Toolbar Station Pills
+  document.querySelectorAll('.pill-stn').forEach(btn => {
+    btn.classList.remove('active');
+    const txt = btn.textContent.trim();
+    if (isLinkLineSelected && txt.includes('RPJ')) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('SMUN') && Math.abs(km - 1170.435) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('SBJN') && Math.abs(km - 1188.575) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('NSIR') && Math.abs(km - 1202.015) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('GVGN') && Math.abs(km - 1213.187) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('KNNN') && Math.abs(km - 1229.087) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('CHAN') && Math.abs(km - 1235.837) < 1.0) {
+      btn.classList.add('active');
+    } else if (!isLinkLineSelected && txt.includes('SNL') && Math.abs(km - 1249.700) < 1.0) {
+      btn.classList.add('active');
+    }
+  });
+
+  // 5. Update Inspector Sidebar Cards
+  updateInspectorSidebar(km, gps, isLinkLineSelected);
+}
+
+function updateInspectorSidebar(km, gps, isLinkLine = false) {
+  // Search input sync
+  const input = document.getElementById('kmSearchInput');
+  if (input && document.activeElement !== input) {
+    input.value = km.toFixed(2);
+  }
+
+  // Chainage & IR
+  const cardDfc = document.getElementById('cardDfcKm');
+  const cardIr = document.getElementById('cardIrKm');
+  const cardLat = document.getElementById('cardLat');
+  const cardLon = document.getElementById('cardLon');
+  const cardGmaps = document.getElementById('cardGmapsLink');
+
+  if (cardDfc) {
+    cardDfc.innerHTML = isLinkLine 
+      ? `KM ${km.toFixed(3)} <span style="font-size:0.68rem; color:#ef4444; font-weight:800; background:rgba(239,68,68,0.15); padding:1px 5px; border-radius:3px;">LINK LINE</span>` 
+      : `KM ${km.toFixed(3)}`;
+  }
+  if (cardIr) {
+    if (isLinkLine) {
+      cardIr.textContent = `IR Rajpura Chord (~288.7 RPJ)`;
+    } else {
+      const irKmEst = 281.0 + (km - 1170.435);
+      cardIr.textContent = `IR KM ~${irKmEst.toFixed(1)}`;
+    }
+  }
+  if (cardLat) cardLat.textContent = `${gps.lat.toFixed(5)}° N`;
+  if (cardLon) cardLon.textContent = `${gps.lon.toFixed(5)}° E`;
+  if (cardGmaps) {
+    cardGmaps.href = `https://www.google.com/maps/search/?api=1&query=${gps.lat.toFixed(6)},${gps.lon.toFixed(6)}`;
+  }
+
+  // Section
+  const cardSec = document.getElementById('cardSectionName');
+  if (cardSec) {
+    if (isLinkLine) {
+      cardSec.innerHTML = `<b style="color:#ef4444;">Section: SMUN-RPJ</b> (Single Line DFC Link Chord)`;
+    } else {
+      let secName = 'KNZN - SMUN';
+      if (DB_DATA.sections) {
+        const s = DB_DATA.sections.find(x => x.section && !x.section.includes('Total') && !x.section.includes('Summary') && !x.section.includes('RPJ') && x.km_from <= km && km <= x.km_to);
+        if (s) secName = `Section: ${s.section} (${s.line === 'SL' ? 'Single Line DFC' : (s.line || 'Double Line BG')})`;
+      }
+      cardSec.textContent = secName;
+    }
+  }
+
+  // Profile & Levels
+  const cardPfl = document.getElementById('cardPfl');
+  const cardGl = document.getElementById('cardGl');
+  const cardBank = document.getElementById('cardBank');
+  const cardGrad = document.getElementById('cardGrad');
+
+  const pt = getProfilePointAtKm(km, isLinkLine);
+  if (cardPfl) cardPfl.textContent = `${pt.pfl.toFixed(3)} m`;
+  if (cardGl) cardGl.textContent = `${pt.gl.toFixed(3)} m`;
+  if (cardBank) {
+    const diff = pt.pfl - pt.gl;
+    const isCut = diff < 0;
+    cardBank.textContent = `${isCut ? '' : '+'}${diff.toFixed(2)} m (${isCut ? 'Cutting' : 'Bank'})`;
+    cardBank.style.color = isCut ? '#ef4444' : '#10b981';
+  }
+
+  // Gradient
+  const grad = getGradientAtKm(km);
+  if (cardGrad) cardGrad.textContent = isLinkLine ? '1 in 400 RISE (Link Chord)' : grad;
+
+  // Staff (Keyman & Patrolman)
+  updateStaffCards(km, isLinkLine);
+
+  // Assets (Bridges, LCs, Curves, Turnouts)
+  updateAssetsCards(km, isLinkLine);
+
+  // Station card
+  updateStationCard(km, isLinkLine);
+
+  // Drawing card
+  updateDrawingCard(km, isLinkLine);
+}
+
+function getProfilePointAtKm(km, isLinkLine = false) {
+  let pts = [];
+  if (isLinkLine && DB_DATA.profile && DB_DATA.profile.link_line && DB_DATA.profile.link_line.length) {
+    pts = DB_DATA.profile.link_line;
+  } else if (DB_DATA.profile && DB_DATA.profile.points && DB_DATA.profile.points.length) {
+    pts = DB_DATA.profile.points;
+  }
+  if (!pts.length) return { pfl: 268.5, gl: 265.0 };
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (pts[i].km <= km && km <= pts[i+1].km) {
+      const span = pts[i+1].km - pts[i].km || 0.001;
+      const r = (km - pts[i].km) / span;
+      return {
+        pfl: pts[i].pfl + r * (pts[i+1].pfl - pts[i].pfl),
+        gl: pts[i].gl + r * (pts[i+1].gl - pts[i].gl)
+      };
+    }
+  }
+  if (km <= pts[0].km) return pts[0];
+  return pts[pts.length - 1];
+}
+
+function getGradientAtKm(km) {
+  const prof = DB_DATA.profile || {};
+  const grads = prof.official_gradients || prof.gradients || prof.vivek_gradients || [];
+  for (const g of grads) {
+    if (g.km_from <= km && km <= g.km_to) {
+      return g.label || g.gradient || (g.grade_val === 0 ? 'LEVEL' : `1 in ${Math.round(g.grade_val || 0)} ${g.direction || ''}`);
+    }
+  }
+  return 'LEVEL (1 in ∞)';
+}
+
+function updateStaffCards(km, isLinkLine = false) {
+  const staff = DB_DATA.master_staff || [];
+  const kName = document.getElementById('cardKeymanName');
+  const kBeat = document.getElementById('cardKeymanBeat');
+  const kCall = document.getElementById('cardKeymanCall');
+  const pName = document.getElementById('cardPatrolmanName');
+  const pBeat = document.getElementById('cardPatrolmanBeat');
+  const pCall = document.getElementById('cardPatrolmanCall');
+
+  if (isLinkLine) {
+    // Exact Keyman for SMUN-RPJ Link Line (Beat 33: Km 1171.981 to 1178.150)
+    let linkKeyman = staff.find(s => s.name && s.name.toLowerCase().includes('sukhwinder') && (s.km_range || '').includes('1178'));
+    if (!linkKeyman) {
+      linkKeyman = {
+        name: 'Sukhwinder Singh',
+        beat_no: 'Beat No. 33',
+        km_range: '1171.981 to 1178.150',
+        mobile: '7508325974'
+      };
+    }
+    if (kName) kName.textContent = linkKeyman.name;
+    if (kBeat) kBeat.textContent = `${linkKeyman.beat_no || 'Beat 33'} (${linkKeyman.km_range || 'Km 1171.981 - 1178.150'})`;
+    if (kCall) { kCall.href = `tel:${linkKeyman.mobile}`; kCall.style.display = 'inline-flex'; }
+
+    if (pName) pName.textContent = 'RPJ Chord Patrol (Shift 2)';
+    if (pBeat) pBeat.textContent = 'SMUN - RPJ Beat (Km 1172 - 1178.150)';
+    if (pCall) pCall.style.display = 'none';
+    return;
+  }
+
+  // Robust matching for Main Track KEYMAN and PATROLMAN
+  const allKeymen = staff.filter(s => (s.designation || '').toUpperCase().includes('KEYMAN') && !(s.km_range || '').includes('1178.15'));
+  const allPatrolmen = staff.filter(s => (s.designation || '').toUpperCase().includes('PATROL'));
+
+  let keyman = allKeymen.find(s => s.km_from <= km && km <= s.km_to);
+  if (!keyman && allKeymen.length) {
+    keyman = allKeymen.find(s => Math.abs(s.km_from - km) <= 1.5 || Math.abs(s.km_to - km) <= 1.5);
+  }
+
+  let patrol = allPatrolmen.find(s => s.km_from <= km && km <= s.km_to);
+  if (!patrol && allPatrolmen.length) {
+    patrol = allPatrolmen.find(s => Math.abs(s.km_from - km) <= 1.5 || Math.abs(s.km_to - km) <= 1.5);
+  }
+
+  if (keyman) {
+    if (kName) kName.textContent = keyman.name;
+    if (kBeat) kBeat.textContent = `${keyman.beat_no || 'Beat'} (Km ${keyman.km_from} - ${keyman.km_to})`;
+    if (kCall) { kCall.href = `tel:${keyman.mobile}`; kCall.style.display = 'inline-flex'; }
+  } else {
+    if (kName) kName.textContent = 'Staff on Roster';
+    if (kBeat) kBeat.textContent = 'Beat details in master';
+    if (kCall) kCall.style.display = 'none';
+  }
+
+  if (patrol) {
+    if (pName) pName.textContent = patrol.name;
+    if (pBeat) pBeat.textContent = `${patrol.beat_no || 'Beat'} (Km ${patrol.km_from} - ${patrol.km_to})`;
+    if (pCall) { pCall.href = `tel:${patrol.mobile}`; pCall.style.display = 'inline-flex'; }
+  } else {
+    if (pName) pName.textContent = 'Patrolman on Roster';
+    if (pBeat) pBeat.textContent = 'Beat details in master';
+    if (pCall) pCall.style.display = 'none';
+  }
+}
+
+function updateAssetsCards(km, isLinkLine = false) {
+  const container = document.getElementById('cardAssetsContent');
+  if (!container) return;
+
+  const linkBridgeOldNums = ['105', '107', '111', '113', '115', '117', 'mib', '112', '110'];
+
+  let bridges = [];
+  let curves = [];
+  let points = [];
+  let lwr = [];
+
+  if (isLinkLine) {
+    // Filter specifically for SMUN-RPJ Link Line
+    bridges = (DB_DATA.bridges || []).filter(b => {
+      const ob = String(b.old_bridge_no || '').trim().toLowerCase();
+      const sec = String(b.section || '').toUpperCase();
+      return sec.includes('RPJ') || sec.includes('LINK') || linkBridgeOldNums.includes(ob);
+    }).sort((a, b) => (parseFloat(a.km_from) || 0) - (parseFloat(b.km_from) || 0));
+
+    // LWR for Link Line
+    lwr = (DB_DATA.lwr_sej || []).filter(l => {
+      const sec = String(l.section || '').toUpperCase();
+      return sec.includes('RPJ');
+    });
+  } else {
+    // Main track assets
+    bridges = (DB_DATA.bridges || []).filter(b => {
+      const ob = String(b.old_bridge_no || '').trim().toLowerCase();
+      const sec = String(b.section || '').toUpperCase();
+      if (linkBridgeOldNums.includes(ob) || sec.includes('RPJ') || sec.includes('LINK')) {
+        return false; // Skip link line bridges from main line
+      }
+      return Math.abs(b.km_from - km) <= 0.8 || (b.km_from <= km && km <= b.km_to);
+    });
+    curves = (DB_DATA.curves || []).filter(c => Math.abs(c.km_from - km) <= 0.8 || (c.km_from <= km && km <= c.km_to));
+    points = (DB_DATA.points_and_crossings || []).filter(p => Math.abs(p.srj_chainage - km) <= 0.6);
+  }
+
+  let html = '';
+  if (isLinkLine) {
+    html += `
+      <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.4); padding:0.4rem 0.5rem; border-radius:5px; margin-bottom:0.5rem;">
+        <span style="font-size:0.75rem; font-weight:700; color:#ef4444;">🔗 SMUN-RPJ Link Line Infrastructure</span><br>
+        <span style="font-size:0.68rem; color:#cbd5e1;">Takeoff: KM 1173.000 | Terminus: Rajpura Jn (KM 1178.150)</span>
+      </div>
+    `;
+  }
+
+  if (bridges.length) {
+    bridges.forEach(b => {
+      const isCurrent = Math.abs((parseFloat(b.km_from) || 0) - km) <= 0.4;
+      html += `
+        <div style="background:${isCurrent ? '#1e1b4b' : '#060911'}; border:1px solid ${isCurrent ? '#818cf8' : '#1e293b'}; padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; margin-bottom:4px;" onclick="openBridgeModal('${b.bridge_no}')">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:${isLinkLine ? '#ef4444' : '#f59e0b'};">🌉 Br. ${b.bridge_no} ${b.old_bridge_no ? '(' + b.old_bridge_no + ')' : ''}</b>
+            <span style="font-size:0.65rem; background:#1e293b; color:#38bdf8; padding:1px 5px; border-radius:3px;">Details 🔍</span>
+          </div>
+          <div style="color:#cbd5e1; font-size:0.72rem; margin-top:2px;">
+            ${b.bridge_type} (${b.category || 'Bridge'}) | DFC Km ${b.km_from}
+          </div>
+          <div style="color:#94a3b8; font-size:0.68rem;">
+            Span: ${b.span_config || 'Standard Span'} | Length: ${b.length || ''}m
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (lwr.length) {
+    lwr.forEach(l => {
+      html += `
+        <div style="background:#060911; border:1px solid #1e293b; padding:0.4rem 0.5rem; border-radius:5px; margin-top:4px;">
+          <b style="color:#10b981;">🛤️ LWR No. ${l.lwr_no}</b> (${l.section})<br>
+          <span style="color:#94a3b8; font-size:0.7rem;">Km ${l.km_from} to ${l.km_to} | Length: ${l.length || '0'} km</span>
+        </div>
+      `;
+    });
+  }
+
+  if (curves.length) {
+    curves.forEach(c => {
+      const radius = parseFloat(c.radius || c.radius_tms || 0);
+      const isSharp = radius > 0 && radius <= 800;
+      const curveColor = isSharp ? '#f59e0b' : '#c084fc';
+      html += `
+        <div style="background:#060911; border:1px solid ${curveColor}; padding:0.45rem 0.55rem; border-radius:5px; margin-top:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:${curveColor}; font-size:0.78rem;">🔄 Curve No. ${c.curve_no}</b>
+            <span style="background:${isSharp ? 'rgba(245,158,11,0.2)' : 'rgba(192,132,252,0.2)'}; color:${curveColor}; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:3px;">
+              R = ${radius}m
+            </span>
+          </div>
+          <div style="color:#cbd5e1; font-size:0.7rem; margin-top:2px;">
+            Km ${c.km_from} to ${c.km_to} | Length: ${c.length || ''}m | ${c.degree ? `${c.degree}°` : ''}
+          </div>
+          <div style="color:#94a3b8; font-size:0.65rem; margin-top:2px;">
+            Speed: ${c.speed || '--'} km/h | Cant: ${c.cant_se || '--'}mm | TL: ${c.transition_length || 0}m
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (points.length) {
+    points.forEach(p => {
+      html += `
+        <div style="background:#060911; border:1px solid #1e293b; padding:0.4rem 0.5rem; border-radius:5px; margin-top:4px;">
+          <b style="color:#ef4444;">🔀 Pt ${p.point_no}</b> (${p.station})<br>
+          <span style="color:#94a3b8; font-size:0.7rem;">SRJ Ch: ${p.srj_chainage} | ${p.angle || '1 in 12'}</span>
+        </div>
+      `;
+    });
+  }
+
+  if (!html) {
+    html = `<div style="color:#64748b; font-style:italic;">No major bridge, curve, or turnout in immediate 500m vicinity.</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function updateStationCard(km, isLinkLine = false) {
+  const box = document.getElementById('cardStationBox');
+  const content = document.getElementById('cardStationContent');
+  if (!box || !content) return;
+
+  if (isLinkLine) {
+    box.style.display = 'flex';
+    if (km >= 1175.5) {
+      content.innerHTML = `
+        <div style="font-weight:700; color:#ef4444; font-size:0.85rem;">🏢 Rajpura Junction (RPJ)</div>
+        <div style="font-size:0.72rem; color:#94a3b8; margin:2px 0;">Northern Railway Interchange | DFC Terminus Km: 1178.150</div>
+        <div style="font-size:0.7rem; color:#cbd5e1; margin-bottom:6px;">Link Line Chord Connection to UMB-LDH & RPJ-BTI Northern Railway Lines</div>
+        <button class="btn-tool" style="font-size:0.7rem; padding:0.25rem 0.5rem; background:#ef4444; color:#fff;" onclick="navigateToKm(1178.150, true, true)">
+          ⚡ Focus RPJ Terminus (1178.150)
+        </button>
+      `;
+    } else {
+      content.innerHTML = `
+        <div style="font-weight:700; color:#38bdf8; font-size:0.85rem;">⚡ New Shambhu (SMUN)</div>
+        <div style="font-size:0.72rem; color:#94a3b8; margin:2px 0;">Junction Station | DFC Km: 1170.435</div>
+        <div style="font-size:0.7rem; color:#cbd5e1; margin-bottom:6px;">Link Line Takeoff Bifurcation at KM 1173.000 towards Rajpura Jn</div>
+        <button class="btn-tool active" style="font-size:0.7rem; padding:0.25rem 0.5rem;" onclick="openStationEsp('SMUN')">
+          ⚡ Open SMUN X-Ray Keyplan
+        </button>
+      `;
+    }
+    return;
+  }
+
+  // Standard main track station lookup
+  const stnKms = { 'SMUN':1170.435, 'SBJN':1188.575, 'NSIR':1202.015, 'GVGN':1213.186, 'KNNN':1229.086, 'CHAN':1237.576, 'SNL':1249.7 };
+  let activeCode = null;
+  for (const [code, sKm] of Object.entries(stnKms)) {
+    if (Math.abs(sKm - km) <= 2.2) { activeCode = code; break; }
+  }
+
+  if (activeCode && keyplanStations[activeCode]) {
+    currentStationCode = activeCode;
+    const stn = keyplanStations[activeCode];
+    box.style.display = 'flex';
+    content.innerHTML = `
+      <div style="font-weight:700; color:#38bdf8; font-size:0.85rem;">⚡ ${stn.name}</div>
+      <div style="font-size:0.72rem; color:#94a3b8; margin:2px 0;">${stn.type} | DFC Km: ${stn.dfcKm}</div>
+      <div style="font-size:0.7rem; color:#cbd5e1; margin-bottom:6px;">${stn.lines}</div>
+      <button class="btn-tool active" style="font-size:0.7rem; padding:0.25rem 0.5rem;" onclick="openStationEsp('${activeCode}')">
+        ⚡ Open Station X-Ray Keyplan
+      </button>
+    `;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function updateDrawingCard(km, isLinkLine = false) {
+  const content = document.getElementById('cardDrawingContent');
+  if (!content) return;
+
+  if (isLinkLine) {
+    content.innerHTML = `
+      <div style="background:#060911; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; margin-bottom:0.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <b style="color:#ef4444; font-size:0.78rem;">📐 SMUN-RPJ Link Line L-Section</b>
+          <span style="font-size:0.65rem; color:#38bdf8; background:#1e293b; padding:1px 5px; border-radius:3px;">Plan & Profile</span>
+        </div>
+        <div style="font-size:0.7rem; color:#cbd5e1; margin-top:2px;">
+          Alignment & Longitudinal Profile: Km 1172.010 to Km 1178.150
+        </div>
+        <div style="font-size:0.68rem; color:#94a3b8; margin-top:1px;">
+          Section: SMUN-RPJ Link Line Chord (Takeoff to Rajpura Jn)
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const drawings = DB_DATA.drawings || [];
+  const matchingDrawings = drawings.filter(d => (d.km_from <= km && km <= d.km_to));
+  
+  if (matchingDrawings.length) {
+    let dwgHtml = '';
+    matchingDrawings.forEach(dwg => {
+      dwgHtml += `
+        <div style="background:#060911; border:1px solid #1e293b; padding:0.45rem 0.6rem; border-radius:6px; margin-bottom:0.4rem;">
+          <div style="font-weight:700; color:#38bdf8; font-size:0.75rem;">📜 ${dwg.category || 'P&P Sheet'}</div>
+          <div style="font-size:0.7rem; color:#cbd5e1; margin:2px 0;">Km ${dwg.km_from} to ${dwg.km_to}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; word-break:break-all;"><code>${dwg.filename}</code></div>
+          <div style="margin-top:6px; display:flex; gap:0.4rem;">
+            <a href="${dwg.url}" target="_blank" class="btn-tool" style="color:#38bdf8; font-size:0.68rem; padding:0.2rem 0.5rem;">
+              👁️ View PDF
+            </a>
+            <a href="${dwg.url}" download class="btn-tool" style="color:#10b981; font-size:0.68rem; padding:0.2rem 0.5rem;">
+              📥 Download
+            </a>
+          </div>
+        </div>
+      `;
+    });
+    content.innerHTML = dwgHtml;
+  } else {
+    content.innerHTML = `<div style="color:#64748b; font-style:italic;">No discrete P&P drawing mapped at KM ${km.toFixed(2)}.</div>`;
+  }
+}
+
+// -------------------------------------------------------------
+// 4. LINEAR DIAGRAM ENGINE (HTML5 CANVAS)
+// -------------------------------------------------------------
+function initLinearCanvases() {
+  const vp = document.getElementById('linearViewport');
+  linearCanvas = document.getElementById('linearCanvas');
+  linearCtx = linearCanvas.getContext('2d');
+
+  scrubberCanvas = document.getElementById('scrubberCanvas');
+  scrubberCtx = scrubberCanvas.getContext('2d');
+
+  resizeLinearCanvases();
+  window.addEventListener('resize', () => {
+    resizeLinearCanvases();
+    if (map) map.invalidateSize();
+  });
+
+  // Pan & Click Gestures
+  let dragDistance = 0;
+  vp.addEventListener('mousedown', (e) => {
+    isDraggingLinear = true;
+    dragStartX = e.clientX;
+    dragStartKm = viewKmStart;
+    dragDistance = 0;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isDraggingLinear) {
+      const dx = e.clientX - dragStartX;
+      dragDistance = Math.abs(dx);
+      const dKm = -(dx / linearCanvas.width) * viewKmSpan;
+      viewKmStart = Math.max(minCorridorKm - 2, Math.min(maxCorridorKm - viewKmSpan + 2, dragStartKm + dKm));
+      currentKm = viewKmStart + viewKmSpan / 2;
+      navigateToKm(currentKm, false); // sync marker without violent map panning
+    }
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (isDraggingLinear) {
+      isDraggingLinear = false;
+      // If it was a click without significant drag (< 6px), check bridge hitbox click
+      if (dragDistance < 6 && e.target === linearCanvas) {
+        const rect = linearCanvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        // Check if any bridge was clicked
+        let clickedBridge = null;
+        for (const hb of bridgeHitboxes) {
+          if (Math.abs(hb.x - clickX) <= 12 && Math.abs(hb.y - clickY) <= 22) {
+            clickedBridge = hb.bridge;
+            break;
+          }
+        }
+
+        // Check if any curve block was clicked
+        let clickedCurve = null;
+        for (const ch of curveHitboxes) {
+          if (clickX >= ch.x1 - 3 && clickX <= ch.x2 + 3 && clickY >= ch.y1 && clickY <= ch.y2) {
+            clickedCurve = ch.curve;
+            break;
+          }
+        }
+
+        if (clickedBridge) {
+          openBridgeModal(clickedBridge.bridge_no);
+        } else if (clickedCurve) {
+          const midKm = (parseFloat(clickedCurve.km_from) + parseFloat(clickedCurve.km_to)) / 2;
+          navigateToKm(midKm, true);
+        } else {
+          // Jump to clicked KM
+          const W = vp.clientWidth;
+          const clickedKm = viewKmStart + (clickX / W) * viewKmSpan;
+          navigateToKm(clickedKm, true);
+        }
+      } else {
+        navigateToKm(currentKm, true); // smooth map align
+      }
+    }
+  });
+
+  // Wheel Zoom
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 0.8 : 1.25;
+    viewKmSpan = Math.max(1.0, Math.min(35.0, viewKmSpan * factor));
+    viewKmStart = currentKm - viewKmSpan / 2;
+    renderLinearDiagram();
+  });
+
+  // Scrubber click
+  scrubberCanvas.addEventListener('click', (e) => {
+    const rect = scrubberCanvas.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const km = minCorridorKm + pct * (maxCorridorKm - minCorridorKm);
+    navigateToKm(km);
+  });
+}
+
+function resizeLinearCanvases() {
+  const vp = document.getElementById('linearViewport');
+  if (!vp || !linearCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = vp.clientWidth;
+  const h = vp.clientHeight;
+  linearCanvas.width = Math.floor(w * dpr);
+  linearCanvas.height = Math.floor(h * dpr);
+  linearCtx.scale(dpr, dpr);
+
+  const scrWrap = document.querySelector('.scrubber-wrap');
+  if (scrWrap && scrubberCanvas) {
+    scrubberCanvas.width = Math.floor(scrWrap.clientWidth * dpr);
+    scrubberCanvas.height = Math.floor(scrWrap.clientHeight * dpr);
+    scrubberCtx.scale(dpr, dpr);
+  }
+
+  renderLinearDiagram();
+  renderScrubber();
+}
+
+function renderLinearDiagram() {
+  if (!linearCtx || !linearCanvas) return;
+  const ctx = linearCtx;
+  const vp = document.getElementById('linearViewport');
+  const W = vp.clientWidth;
+  const H = vp.clientHeight;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#060a14';
+  ctx.fillRect(0, 0, W, H);
+
+  const k1 = viewKmStart;
+  const k2 = viewKmStart + viewKmSpan;
+  const kmToX = (km) => ((km - k1) / viewKmSpan) * W;
+
+  // Split: Plan View (45% top) & Longitudinal Profile (55% bottom)
+  const splitY = Math.floor(H * 0.45);
+
+  // Split line
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, splitY);
+  ctx.lineTo(W, splitY);
+  ctx.stroke();
+
+  // 1. KM Grid Vertical Lines
+  const kmStep = viewKmSpan <= 3 ? 0.2 : (viewKmSpan <= 8 ? 0.5 : 1.0);
+  const startTick = Math.floor(k1 / kmStep) * kmStep;
+
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+  ctx.lineWidth = 1;
+  for (let k = startTick; k <= k2; k += kmStep) {
+    const gx = kmToX(k);
+    ctx.beginPath();
+    ctx.moveTo(gx, 0);
+    ctx.lineTo(gx, H);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+    ctx.font = '9px monospace';
+    ctx.fillText(`${k.toFixed(1)}`, gx + 3, splitY - 4);
+  }
+
+  // 2. PLAN VIEW (UP TRACK, DN TRACK, LOOPS, BRIDGES, CURVES)
+  const trackCenterY = Math.floor(splitY * 0.42);
+
+  // Main Tracks
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, trackCenterY);
+  ctx.lineTo(W, trackCenterY);
+  ctx.stroke();
+
+  // Highlight Curves directly on Main Track in Plan View
+  const curvesList = DB_DATA.curves || [];
+  curvesList.forEach(c => {
+    if (c.km_to >= k1 && c.km_from <= k2) {
+      const cx1 = Math.max(0, kmToX(c.km_from));
+      const cx2 = Math.min(W, kmToX(c.km_to));
+      const radius = parseFloat(c.radius || c.radius_tms || 0);
+      const isSharp = radius > 0 && radius <= 800;
+      ctx.strokeStyle = isSharp ? '#f59e0b' : '#c084fc';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(cx1, trackCenterY);
+      ctx.lineTo(cx2, trackCenterY);
+      ctx.stroke();
+    }
+  });
+
+  // Loop Lines
+  const loops = DB_DATA.loop_lines || [];
+  loops.forEach(l => {
+    if (l.ch_to >= k1 && l.ch_from <= k2) {
+      const x1 = kmToX(l.ch_from);
+      const x2 = kmToX(l.ch_to);
+      const isUp = (l.line || '').includes('1');
+      const offset = isUp ? -18 : 18;
+      ctx.strokeStyle = isUp ? '#38bdf8' : '#34d399';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, trackCenterY + offset);
+      ctx.lineTo(x2, trackCenterY + offset);
+      ctx.stroke();
+    }
+  });
+
+  // Bridges in Plan View
+  const bridgesList = DB_DATA.bridges || [];
+  const linkBridgeOldNums = ['105', '107', '111', '113', '115', '117', 'mib', '112', '110'];
+  bridgeHitboxes = [];
+  bridgesList.forEach(b => {
+    const ob = String(b.old_bridge_no || '').trim().toLowerCase();
+    const sec = String(b.section || '').toUpperCase();
+    const isLink = linkBridgeOldNums.includes(ob) || sec.includes('RPJ') || sec.includes('LINK');
+    if (isLinkLineSelected ? !isLink : isLink) {
+      return; // Filter bridges matching current line mode
+    }
+    const bKm = parseFloat(b.km_from);
+    if (bKm >= k1 && bKm <= k2) {
+      const bx = kmToX(bKm);
+      // Bridge structure symbol
+      ctx.fillStyle = isLink ? '#ef4444' : '#f59e0b';
+      ctx.fillRect(bx - 3, trackCenterY - 10, 6, 20);
+      
+      // Top cap and bottom cap
+      ctx.fillStyle = isLink ? '#b91c1c' : '#d97706';
+      ctx.fillRect(bx - 6, trackCenterY - 12, 12, 3);
+      ctx.fillRect(bx - 6, trackCenterY + 9, 12, 3);
+
+      ctx.fillStyle = isLink ? '#fca5a5' : '#fbbf24';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(b.bridge_no, bx, trackCenterY - 15);
+
+      // Record hitbox for clicks
+      bridgeHitboxes.push({
+        x: bx,
+        y: trackCenterY,
+        bridge: b
+      });
+    }
+  });
+
+  // Stations in Plan View
+  const stnKms = isLinkLineSelected
+    ? { 'SMUN': 1170.435, 'RPJ': 1178.150 }
+    : { 'SMUN': 1170.435, 'SBJN': 1188.575, 'NSIR': 1202.015, 'GVGN': 1213.186, 'KNNN': 1229.086, 'CHAN': 1237.576, 'SNL': 1249.7 };
+  for (const [code, sKm] of Object.entries(stnKms)) {
+    if (sKm >= k1 && sKm <= k2) {
+      const sx = kmToX(sKm);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(sx, trackCenterY, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(code, sx, trackCenterY - 26);
+    }
+  }
+
+  // Curvature Diagram Strip (Bottom of Plan View)
+  const curveStripY = splitY - 26;
+  const curveStripH = 22;
+
+  ctx.fillStyle = '#080d1a';
+  ctx.fillRect(0, curveStripY, W, curveStripH);
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, curveStripY, W, curveStripH);
+
+  // Baseline center line
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, curveStripY + curveStripH / 2);
+  ctx.lineTo(W, curveStripY + curveStripH / 2);
+  ctx.stroke();
+
+  // Strip Title
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold 8.5px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('CURVE', 6, curveStripY + 14);
+
+  curveHitboxes = [];
+  curvesList.forEach(c => {
+    if (c.km_to >= k1 && c.km_from <= k2) {
+      const cx1 = Math.max(0, kmToX(c.km_from));
+      const cx2 = Math.min(W, kmToX(c.km_to));
+      const cWidth = cx2 - cx1;
+      if (cWidth <= 0.5) return;
+
+      const radius = parseFloat(c.radius || c.radius_tms || 0);
+      const isSharp = radius > 0 && radius <= 800;
+      const curveColor = isSharp ? '#f59e0b' : '#c084fc';
+      const blockH = 14;
+      const blockY = curveStripY + 4;
+
+      // Curve block fill & outline
+      ctx.fillStyle = isSharp ? 'rgba(245, 158, 11, 0.28)' : 'rgba(192, 132, 252, 0.28)';
+      ctx.fillRect(cx1, blockY, cWidth, blockH);
+      ctx.strokeStyle = curveColor;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(cx1, blockY, cWidth, blockH);
+
+      // Text label if width permits
+      if (cWidth >= 28) {
+        ctx.fillStyle = curveColor;
+        ctx.font = 'bold 8.5px monospace';
+        ctx.textAlign = 'center';
+        const label = `C-${c.curve_no} R=${radius}m` + (cWidth >= 75 ? ` (${c.length}m)` : '');
+        ctx.fillText(label, (cx1 + cx2) / 2, blockY + 10);
+      }
+
+      // Hitbox for clicks
+      curveHitboxes.push({
+        x1: cx1,
+        x2: cx2,
+        y1: curveStripY,
+        y2: curveStripY + curveStripH,
+        curve: c
+      });
+    }
+  });
+
+  // 3. PROFILE VIEW (PFL, GL, GRADIENTS)
+  const profH = H - splitY;
+  const pts = (isLinkLineSelected && DB_DATA.profile && DB_DATA.profile.link_line && DB_DATA.profile.link_line.length)
+    ? DB_DATA.profile.link_line
+    : (DB_DATA.profile && DB_DATA.profile.points ? DB_DATA.profile.points : []);
+
+  if (pts.length) {
+    const profY = (lvl) => splitY + profH - ((lvl - 250) / 40) * (profH - 25);
+
+    // GL line
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    for (const p of pts) {
+      if (p.km >= k1 - 0.5 && p.km <= k2 + 0.5) {
+        const px = kmToX(p.km);
+        const py = profY(p.gl);
+        if (!started) { ctx.moveTo(px, py); started = true; } else { ctx.lineTo(px, py); }
+      }
+    }
+    ctx.stroke();
+
+    // PFL line (Formation)
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    started = false;
+    for (const p of pts) {
+      if (p.km >= k1 - 0.5 && p.km <= k2 + 0.5) {
+        const px = kmToX(p.km);
+        const py = profY(p.pfl);
+        if (!started) { ctx.moveTo(px, py); started = true; } else { ctx.lineTo(px, py); }
+      }
+    }
+    ctx.stroke();
+
+    // Fill between PFL and baseline for elevation readability
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+    ctx.lineTo(kmToX(k2), H - 24);
+    ctx.lineTo(kmToX(k1), H - 24);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 3B. Gradient Strip Band (Bottom of Profile View)
+  const prof = DB_DATA.profile || {};
+  const grads = prof.official_gradients || prof.gradients || [];
+  const gradStripY = H - 22;
+  const gradStripH = 20;
+
+  // Gradient strip background bar
+  ctx.fillStyle = '#090e1a';
+  ctx.fillRect(0, gradStripY, W, gradStripH);
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, gradStripY, W, gradStripH);
+
+  grads.forEach(g => {
+    if (g.km_to >= k1 && g.km_from <= k2) {
+      const gx1 = Math.max(0, kmToX(g.km_from));
+      const gx2 = Math.min(W, kmToX(g.km_to));
+      const gWidth = gx2 - gx1;
+      if (gWidth <= 0) return;
+
+      const dir = (g.direction || '').toUpperCase();
+      const isRising = dir.includes('RISE');
+      const isFalling = dir.includes('FALL');
+
+      // Gradient Block fill
+      ctx.fillStyle = isRising ? 'rgba(16, 185, 129, 0.2)' : (isFalling ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.12)');
+      ctx.fillRect(gx1, gradStripY, gWidth, gradStripH);
+      
+      // Border delimiter
+      ctx.strokeStyle = isRising ? '#10b981' : (isFalling ? '#ef4444' : '#64748b');
+      ctx.lineWidth = 1;
+      ctx.strokeRect(gx1, gradStripY, gWidth, gradStripH);
+
+      // Gradient Label Text
+      if (gWidth > 45) {
+        ctx.fillStyle = isRising ? '#34d399' : (isFalling ? '#f87171' : '#cbd5e1');
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        const arrow = isRising ? '↗' : (isFalling ? '↘' : '→');
+        const text = `${arrow} ${g.label || (g.grade_val ? '1:' + Math.round(g.grade_val) : 'LEVEL')}`;
+        ctx.fillText(text, (gx1 + gx2) / 2, gradStripY + 14);
+      }
+    }
+  });
+
+  // 4. Cursor / Center Marker Indicator
+  const curX = kmToX(currentKm);
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(curX, 0);
+  ctx.lineTo(curX, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Indicator Badge
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(curX - 32, 4, 64, 18);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`KM ${currentKm.toFixed(2)}`, curX, 17);
+
+  ctx.restore();
+
+  // Update text label
+  const rangeTxt = document.getElementById('linearRangeTxt');
+  if (rangeTxt) {
+    rangeTxt.innerHTML = isLinkLineSelected 
+      ? `<span style="color:#ef4444; font-weight:800;">🔗 LINK LINE (SMUN-RPJ)</span>: KM ${k1.toFixed(1)} to ${k2.toFixed(1)} (${viewKmSpan.toFixed(1)} km span)`
+      : `KM ${k1.toFixed(1)} to ${k2.toFixed(1)} (${viewKmSpan.toFixed(1)} km span)`;
+  }
+}
+
+function renderScrubber() {
+  if (!scrubberCtx || !scrubberCanvas) return;
+  const ctx = scrubberCtx;
+  const scrWrap = document.querySelector('.scrubber-wrap');
+  const W = scrWrap.clientWidth;
+  const H = scrWrap.clientHeight;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#05080f';
+  ctx.fillRect(0, 0, W, H);
+
+  const kmToX = (km) => ((km - minCorridorKm) / (maxCorridorKm - minCorridorKm)) * W;
+
+  // Viewport highlight
+  const x1 = kmToX(viewKmStart);
+  const x2 = kmToX(viewKmStart + viewKmSpan);
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+  ctx.fillRect(x1, 0, Math.max(8, x2 - x1), H);
+  ctx.strokeStyle = '#38bdf8';
+  ctx.strokeRect(x1, 0, Math.max(8, x2 - x1), H);
+
+  // Station dots
+  const stnKms = { 'SMUN':1170.435, 'SBJN':1188.575, 'NSIR':1202.015, 'GVGN':1213.186, 'KNNN':1229.086, 'CHAN':1237.576, 'SNL':1249.7 };
+  ctx.fillStyle = '#f59e0b';
+  for (const [code, sKm] of Object.entries(stnKms)) {
+    const sx = kmToX(sKm);
+    ctx.fillRect(sx - 1.5, 3, 3, H - 6);
+  }
+
+  ctx.restore();
+}
+
+function zoomLinear(factor) {
+  viewKmSpan = Math.max(1.0, Math.min(35.0, viewKmSpan * factor));
+  viewKmStart = currentKm - viewKmSpan / 2;
+  renderLinearDiagram();
+}
+
+function fitAllLinear() {
+  viewKmStart = minCorridorKm;
+  viewKmSpan = maxCorridorKm - minCorridorKm;
+  currentKm = (minCorridorKm + maxCorridorKm) / 2;
+  navigateToKm(currentKm);
+}
+
+// -------------------------------------------------------------
+// 5. RESIZING & VIEW MODES
+// -------------------------------------------------------------
+function setViewMode(mode) {
+  viewMode = mode;
+  const mapPane = document.getElementById('mapPane');
+  const linearPane = document.getElementById('linearPane');
+  const divider = document.getElementById('paneDivider');
+
+  document.getElementById('btnViewSplit').classList.toggle('active', mode === 'split');
+  document.getElementById('btnViewMap').classList.toggle('active', mode === 'map');
+  document.getElementById('btnViewLinear').classList.toggle('active', mode === 'linear');
+
+  if (mode === 'split') {
+    mapPane.style.height = '50%';
+    linearPane.style.height = '50%';
+    mapPane.style.display = 'block';
+    linearPane.style.display = 'flex';
+    divider.style.display = 'flex';
+  } else if (mode === 'map') {
+    mapPane.style.height = '100%';
+    linearPane.style.height = '0%';
+    linearPane.style.display = 'none';
+    mapPane.style.display = 'block';
+    divider.style.display = 'none';
+  } else if (mode === 'linear') {
+    linearPane.style.height = '100%';
+    mapPane.style.height = '0%';
+    mapPane.style.display = 'none';
+    linearPane.style.display = 'flex';
+    divider.style.display = 'none';
+  }
+
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+    resizeLinearCanvases();
+  }, 220);
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('inspectorSidebar');
+  const btn = document.getElementById('btnToggleSidebar');
+  sb.classList.toggle('collapsed');
+  btn.classList.toggle('active', !sb.classList.contains('collapsed'));
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+    resizeLinearCanvases();
+  }, 260);
+}
+
+function setupDividerResizing() {
+  const divider = document.getElementById('paneDivider');
+  const mapPane = document.getElementById('mapPane');
+  const linearPane = document.getElementById('linearPane');
+  let isResizing = false;
+
+  divider.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    document.body.style.cursor = 'row-resize';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const totalH = document.getElementById('panesContainer').clientHeight;
+    const newMapH = Math.max(100, Math.min(totalH - 120, e.clientY - 46));
+    const newLinearH = totalH - newMapH - 6;
+
+    mapPane.style.height = `${newMapH}px`;
+    linearPane.style.height = `${newLinearH}px`;
+
+    if (map) map.invalidateSize();
+    resizeLinearCanvases();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = 'default';
+    }
+  });
+}
+
+function executeKmSearch() {
+  const val = parseFloat(document.getElementById('kmSearchInput').value);
+  if (!isNaN(val)) {
+    const isLink = (val === 1178.15 || (isLinkLineSelected && val >= 1172.0 && val <= 1178.15));
+    navigateToKm(val, true, isLink);
+  }
+}
+
+function stepKm(delta) {
+  navigateToKm(currentKm + delta, true, isLinkLineSelected);
+}
+
+// -------------------------------------------------------------
+// 6. X-RAY KEYPLAN MODAL VIEWER
+// -------------------------------------------------------------
+function openStationEsp(stationCode) {
+  if (stationCode === 'SNL') stationCode = 'CHAN';
+  const stn = keyplanStations[stationCode] || keyplanStations['SMUN'];
+  const modal = document.getElementById('espModal');
+  const modalTitle = document.getElementById('espModalTitle');
+  const modalBody = document.getElementById('espModalBody');
+
+  modalTitle.innerHTML = `⚡ <b>Official X-Ray Keyplan</b>: ${stn.name} <span style="font-size:0.75rem; color:#38bdf8; font-weight:normal; margin-left:8px;">[SIP Signaling Blueprint]</span>`;
+
+  const tabsHtml = Object.keys(keyplanStations).map(code => `
+    <button class="btn-tool ${code === stn.code ? 'active' : ''}" onclick="openStationEsp('${code}')">⚡ ${code}</button>
+  `).join('');
+
+  const keyplanUrl = `/static/keyplans/${stn.file}`;
+
+  modalBody.innerHTML = `
+    <div style="display:flex; flex-direction:column; height:100%; width:100%; background:#090d16;">
+      <div style="padding:0.35rem 0.8rem; background:#0b1222; border-bottom:1px solid #1e293b; display:flex; align-items:center; gap:0.4rem;">
+        <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">STATION:</span>
+        ${tabsHtml}
+        <div style="margin-left:auto; display:flex; gap:0.3rem;">
+          <a href="${keyplanUrl}" download="${stn.code}_Official_X-Ray_Keyplan.png" class="btn-tool" style="background:#0284c7; color:#fff;">📥 Download HD Plan</a>
+          <a href="${keyplanUrl}" target="_blank" class="btn-tool" style="color:#38bdf8;">↗️ Full Tab</a>
+        </div>
+      </div>
+      <div style="flex:1; position:relative; overflow:hidden; background:#060a12;">
+        <img src="${keyplanUrl}" style="width:100%; height:100%; object-fit:contain; display:block;" alt="${stn.name}">
+      </div>
+      <div style="padding:0.3rem 0.8rem; background:#0b1222; border-top:1px solid #1e293b; font-size:0.72rem; color:#94a3b8; display:flex; justify-content:space-between;">
+        <span>⚡ <b>${stn.name}</b> | DFC Km: ${stn.dfcKm} | Points: ${stn.points}</span>
+        <span>Drag / Pinch in new tab to zoom 500%</span>
+      </div>
+    </div>
+  `;
+  modal.classList.add('open');
+}
+
+function closeEspModal() {
+  document.getElementById('espModal').classList.remove('open');
+}
+
+// -------------------------------------------------------------
+// 7. BRIDGE DETAIL MODAL VIEWER
+// -------------------------------------------------------------
+function openBridgeModal(bridgeNo) {
+  if (!bridgeNo) return;
+  const modal = document.getElementById('bridgeModal');
+  const modalTitle = document.getElementById('bridgeModalTitle');
+  const modalBody = document.getElementById('bridgeModalBody');
+  if (!modal || !modalBody) return;
+
+  const bridgesList = DB_DATA.bridges || [];
+  const cleanSearch = bridgeNo.toString().trim().toLowerCase();
+  const b = bridgesList.find(x => 
+    (x.bridge_no && x.bridge_no.toString().trim().toLowerCase() === cleanSearch) ||
+    (x.old_bridge_no && x.old_bridge_no.toString().trim().toLowerCase() === cleanSearch)
+  ) || { bridge_no: bridgeNo, bridge_type: 'Bridge Structure', km_from: currentKm, span_config: 'N/A' };
+
+  modalTitle.innerHTML = `🌉 <b>DFC Bridge ${b.bridge_no}</b> <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal; margin-left:8px;">[${b.bridge_type || 'Track Structure'}]</span>`;
+
+  modalBody.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:1rem; font-family:sans-serif;">
+      <!-- Top Overview Card -->
+      <div style="background:#090e1a; border:1px solid #1e293b; border-radius:8px; padding:0.9rem 1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="font-size:1.15rem; font-weight:800; color:#f59e0b;">Br. No. ${b.bridge_no}</div>
+            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">
+              Section: <b style="color:#f8fafc;">${b.section || 'Main Line'}</b> | Old Br. No: <b style="color:#38bdf8;">${b.old_bridge_no || 'N/A'}</b>
+            </div>
+          </div>
+          <span style="background:#1e293b; color:#38bdf8; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">
+            KM ${b.km_from}
+          </span>
+        </div>
+      </div>
+
+      <!-- Specs Grid -->
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.6rem;">
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Bridge Type / Classification</div>
+          <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:3px;">${b.bridge_type || 'N/A'} (${b.remarks || 'Standard'})</div>
+        </div>
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Category & Structure</div>
+          <div style="font-size:0.95rem; font-weight:700; color:#38bdf8; margin-top:3px;">${b.category || 'Girder / Box'}</div>
+        </div>
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Span Configuration</div>
+          <div style="font-size:0.95rem; font-weight:700; color:#10b981; margin-top:3px;">${b.span_config || 'N/A'}</div>
+        </div>
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Overall Length / Waterway</div>
+          <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:3px;">Length: ${b.length || 'N/A'}m | Lin: ${b.linear_waterway || 'N/A'}m</div>
+        </div>
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Start Chainage</div>
+          <div style="font-size:0.9rem; font-weight:700; color:#f8fafc; font-family:monospace; margin-top:3px;">DFC Km ${b.km_from}</div>
+        </div>
+        <div style="background:#060911; border:1px solid #1e293b; border-radius:6px; padding:0.6rem 0.75rem;">
+          <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">End Chainage</div>
+          <div style="font-size:0.9rem; font-weight:700; color:#f8fafc; font-family:monospace; margin-top:3px;">DFC Km ${b.km_to || b.km_from}</div>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.5rem;">
+        <button class="btn-tool active" style="padding:0.4rem 0.8rem;" onclick="closeBridgeModal(); navigateToKm(${parseFloat(b.km_from) || currentKm}, true);">
+          📍 Jump Map & Linear to this Bridge
+        </button>
+        <button class="btn-tool" style="padding:0.4rem 0.8rem; background:#334155; color:#fff;" onclick="closeBridgeModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add('open');
+}
+
+function closeBridgeModal() {
+  const modal = document.getElementById('bridgeModal');
+  if (modal) modal.classList.remove('open');
+}
+</script>
+
+</body>
+</html>

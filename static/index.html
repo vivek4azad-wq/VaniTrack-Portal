@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vani | DFCCIL IMSD New Shambhu Track & Store Portal</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚂</text></svg>">
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="brand-badge">
+        <span>DFCCIL</span>
+      </div>
+      <div class="brand-title">
+        <h1>🚂 Vani Track & Store Portal</h1>
+        <p>IMSD New Shambhu (SMUN) — Sanehwal (SNL) Section | APM / Civil</p>
+      </div>
+    </div>
+
+    <div class="header-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="globalSearchInput" placeholder="Search bridges, curves, points, staff, drawings, store... (Press /)">
+      <div id="searchResultsDropdown" class="search-dropdown"></div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn" id="refreshDataBtn" title="Re-index and update database">
+        <span>🔄 Refresh</span>
+      </button>
+      <button class="btn" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+        <span id="themeIcon">🌓</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- App Body -->
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <div class="nav-category">Main</div>
+        <a class="nav-item active" data-tab="dashboard">
+          <span>📊</span> Overview & Schematic
+        </a>
+        <a class="nav-item" href="/map" target="_blank" style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08);">
+          <span>🛰️</span> Map + Diagram Workstation ↗
+        </a>
+        <a class="nav-item" data-tab="linear-diagram">
+          <span>🗺️</span> Linear Diagram & Profile
+        </a>
+        <a class="nav-item" data-tab="chainage-locator">
+          <span>📍</span> Chainage Locator
+        </a>
+
+        <div class="nav-category">Track Infrastructure</div>
+        <a class="nav-item" data-tab="bridges">
+          <span>🌉</span> Bridges
+          <span class="badge" id="badgeBridges">144</span>
+        </a>
+        <a class="nav-item" data-tab="curves">
+          <span>🔄</span> Curves
+          <span class="badge" id="badgeCurves">95</span>
+        </a>
+        <a class="nav-item" data-tab="pnc">
+          <span>🔀</span> Points & Crossings
+          <span class="badge" id="badgePnc">162</span>
+        </a>
+        <a class="nav-item" data-tab="loop-lines">
+          <span>🛤️</span> Loop Lines & Yards
+          <span class="badge" id="badgeLoopLines">72</span>
+        </a>
+        <a class="nav-item" data-tab="lwr-sej">
+          <span>📏</span> LWR & SEJ
+          <span class="badge" id="badgeLwr">27</span>
+        </a>
+        <a class="nav-item" data-tab="defects">
+          <span>⚠️</span> Defects & DFWO
+          <span class="badge" id="badgeDefects">90</span>
+        </a>
+
+        <div class="nav-category">Operations & Store</div>
+        <a class="nav-item" data-tab="staff">
+          <span>👷</span> Staff Directory
+          <span class="badge" id="badgeStaff">70</span>
+        </a>
+        <a class="nav-item" data-tab="drawings">
+          <span>📜</span> P&P & ESP Drawings
+          <span class="badge" id="badgeDrawings">249</span>
+        </a>
+        <a class="nav-item" data-tab="store">
+          <span>📦</span> IMSD Store Stock
+          <span class="badge" id="badgeStore">67</span>
+        </a>
+        <a class="nav-item" data-tab="trc">
+          <span>📉</span> TRC Inspection
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="mainContent">
+
+      <!-- 1. DASHBOARD TAB -->
+      <section id="tab-dashboard" class="tab-pane active">
+        
+        <!-- Stats Strip -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Bridges</span>
+              <span class="stat-icon">🌉</span>
+            </div>
+            <div class="stat-value" id="kpiBridges">144</div>
+            <div class="stat-desc">Major, Minor, ROB, RUB, FOB</div>
+          </div>
+
+          <div class="stat-card gold">
+            <div class="stat-header">
+              <span class="stat-title">Curves</span>
+              <span class="stat-icon">🔄</span>
+            </div>
+            <div class="stat-value" id="kpiCurves">95</div>
+            <div class="stat-desc">Radius 1750m to 6000m+</div>
+          </div>
+
+          <div class="stat-card green">
+            <div class="stat-header">
+              <span class="stat-title">Points & Crossings</span>
+              <span class="stat-icon">🔀</span>
+            </div>
+            <div class="stat-value" id="kpiPoints">162</div>
+            <div class="stat-desc">1/12 & 1/8.5 turnouts</div>
+          </div>
+
+          <div class="stat-card indigo">
+            <div class="stat-header">
+              <span class="stat-title">Staff Members</span>
+              <span class="stat-icon">👷</span>
+            </div>
+            <div class="stat-value" id="kpiStaff">70</div>
+            <div class="stat-desc">Keymen, Gatemen, Shifts 1 & 2</div>
+          </div>
+
+          <div class="stat-card red">
+            <div class="stat-header">
+              <span class="stat-title">Engineering Drawings</span>
+              <span class="stat-icon">📜</span>
+            </div>
+            <div class="stat-value" id="kpiDrawings">249</div>
+            <div class="stat-desc">244 P&P PDFs + 5 ESP CADs</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">P-Way Materials</span>
+              <span class="stat-icon">📦</span>
+            </div>
+            <div class="stat-value" id="kpiStore">67</div>
+            <div class="stat-desc">Stock Ledgers at SMUN</div>
+          </div>
+        </div>
+
+        <!-- Linear Track Schematic -->
+        <div class="track-map-card">
+          <div class="card-title">
+            <span>🗺️</span> Linear Route Schematic (New Shambhu to Sanehwal)
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            Click on any station to view its yard details, loop lines, points, and engineering drawings.
+          </p>
+          <div class="track-line-wrapper">
+            <div class="track-schematic" id="trackSchematic">
+              <div class="track-rail-line"></div>
+              
+              <div class="station-node" onclick="app.showStationYard('SMUN')">
+                <div class="station-section-label">UBCD-SMUN</div>
+                <div class="station-circle"></div>
+                <div class="station-name">SMUN</div>
+                <div class="station-chainage">Km 1169.0</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('SMUN')" title="Open SMUN Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('SBJN')">
+                <div class="station-section-label">SMUN-SBJN</div>
+                <div class="station-circle"></div>
+                <div class="station-name">SBJN (Sarai Banjara)</div>
+                <div class="station-chainage">Km 1188.5</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('SBJN')" title="Open SBJN Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('NSIR')">
+                <div class="station-section-label">SBJN-NSIR</div>
+                <div class="station-circle"></div>
+                <div class="station-name">NSIR (Sirhind)</div>
+                <div class="station-chainage">Km 1202.0</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('NSIR')" title="Open NSIR Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('GVGN')">
+                <div class="station-section-label">NSIR-GVGN</div>
+                <div class="station-circle"></div>
+                <div class="station-name">GVGN (Gobindgarh)</div>
+                <div class="station-chainage">Km 1213.2</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('GVGN')" title="Open GVGN Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('KNNN')">
+                <div class="station-section-label">GVGN-KNNN</div>
+                <div class="station-circle"></div>
+                <div class="station-name">KNNN (Khanna)</div>
+                <div class="station-chainage">Km 1224.0</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('KNNN')" title="Open KNNN Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('CHAN')">
+                <div class="station-section-label">KNNN-CHAN</div>
+                <div class="station-circle"></div>
+                <div class="station-name">CHAN (Chawa Pail)</div>
+                <div class="station-chainage">Km 1237.0</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('CHAN')" title="Open CHAN Official X-Ray Signaling Keyplan">⚡ X-Ray Plan</button>
+              </div>
+
+              <div class="station-node" onclick="app.showStationYard('SNL')">
+                <div class="station-section-label">CHAN-SNL</div>
+                <div class="station-circle"></div>
+                <div class="station-name">SNL (Sanehwal)</div>
+                <div class="station-chainage">Km 1250.0</div>
+                <button class="stn-esp-btn" onclick="event.stopPropagation(); app.openStationEsp('SNL')" title="Open Sanehwal Yard Plan">⚡ X-Ray Plan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Details Table -->
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>📋</span> Block Section Inventory Summary</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="sectionSummaryTable">
+              <thead>
+                <tr>
+                  <th>Section</th>
+                  <th>Line</th>
+                  <th>Km From</th>
+                  <th>Km To</th>
+                  <th>Length (Km)</th>
+                  <th>Major (MJB)</th>
+                  <th>Minor (MIB)</th>
+                  <th>RUB</th>
+                  <th>ROB</th>
+                  <th>FOB</th>
+                  <th>OWG</th>
+                  <th>LC</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- LINEAR TRACK & GRADIENT DIAGRAM TAB -->
+      <section id="tab-linear-diagram" class="tab-pane" style="display: none;">
+        <div class="linear-diagram-card">
+          <!-- 1. TOP CONTROL TOOLBAR (Upar wala - moved to top) -->
+          <div class="linear-toolbar">
+            <div class="toolbar-group">
+              <div class="line-switch-container">
+                <button class="line-switch-btn active" id="btnSwitchMainLine" onclick="linearViewer.setLineMode('main')">🛤️ Main Line (DFC)</button>
+                <button class="line-switch-btn" id="btnSwitchLinkLine" onclick="linearViewer.setLineMode('link')">🔗 Link Line (SMUN-RPJ)</button>
+              </div>
+            </div>
+
+            <div class="toolbar-group" id="yardPillsGroup">
+              <span class="toolbar-label">Yards:</span>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1169.5)">SMUN</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1188.5)">SBJN</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1202.0)">NSIR</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1213.2)">GVGN</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1229.0)">KNNN</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1237.5)">CHAN</button>
+              <button class="station-pill" onclick="linearViewer.flyToKm(1249.7)">SNL</button>
+            </div>
+
+            <div class="toolbar-group">
+              <span class="toolbar-label">Go to Km:</span>
+              <input type="number" step="0.1" id="linearKmSearch" placeholder="1175.5" style="width: 80px; padding: 0.2rem 0.4rem; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
+              <button class="btn btn-primary" style="padding: 0.2rem 0.55rem; font-size: 0.75rem;" onclick="linearViewer.searchKm()">Go</button>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="btn" style="padding: 0.25rem 0.6rem;" onclick="linearViewer.zoomBy(1.5)" title="Zoom In (+)">🔍 +</button>
+              <button class="btn" style="padding: 0.25rem 0.6rem;" onclick="linearViewer.zoomBy(0.67)" title="Zoom Out (-)">🔍 -</button>
+              <button class="btn" style="padding: 0.25rem 0.6rem;" onclick="linearViewer.fitEntireSection()" title="Fit Entire Corridor">↔ Fit</button>
+              <span class="lod-indicator" id="lodIndicatorBadge">Macro Overview</span>
+              <button class="btn" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 0.75rem; padding: 0.25rem 0.6rem;" onclick="app.switchTab('drawings')" title="Open P&P Drawings">📜 P&P Drawings</button>
+              
+              <!-- Open in Full Screen New Tab Button & Fullscreen Mark -->
+              <button class="btn" style="background:#0284c7; color:#fff; font-weight:700; font-size: 0.75rem; padding: 0.25rem 0.65rem;" onclick="window.open('/linear', '_blank')" title="Open Linear Diagram in Full Screen in New Tab">↗️ Full Screen (New Tab)</button>
+              <button class="btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="linearViewer.toggleFullscreen()" title="Toggle Fullscreen Mode">⛶ Fullscreen</button>
+
+              <a href="/download/apk" class="btn btn-primary" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;" title="Download Android APK">📱 Download APK</a>
+            </div>
+
+            <div class="toolbar-group" style="font-size: 0.75rem;">
+              <label class="layer-toggle"><input type="checkbox" id="layerBridges" checked onchange="linearViewer.toggleLayer('bridges', this.checked)"> Bridges</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerCurves" checked onchange="linearViewer.toggleLayer('curves', this.checked)"> Curves</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerPnc" checked onchange="linearViewer.toggleLayer('pnc', this.checked)"> Turnouts</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerGradients" checked onchange="linearViewer.toggleLayer('gradients', this.checked)"> Gradients</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerLoopLines" checked onchange="linearViewer.toggleLayer('loop_lines', this.checked)"> Loop Lines</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerHighBank" checked onchange="linearViewer.toggleLayer('high_banks', this.checked)"> High Banks</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerDefects" checked onchange="linearViewer.toggleLayer('defects', this.checked)"> Defects</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerBeats" checked onchange="linearViewer.toggleLayer('beats', this.checked)"> Keyman Beats</label>
+              <label class="layer-toggle"><input type="checkbox" id="layerPatrolmen" checked onchange="linearViewer.toggleLayer('patrolmen', this.checked)"> 🛡️ Patrolmen</label>
+            </div>
+          </div>
+
+          <!-- 2. ATTACHMENT DETAILS PANEL (Diagram ke just upar) -->
+          <div class="linear-details-panel" id="linearDetailsPanel">
+            <div class="hud-main-row">
+              <div class="hud-chainage-badge">
+                <span id="hudChainageText">KM 1170.442</span>
+                <span class="sec-tag" id="hudSectionText">SMUN Yard</span>
+                <span class="line-badge" id="hudLineBadge">MAIN LINE</span>
+              </div>
+              <div class="hud-elev-bar">
+                <div>PFL: <b id="hudPflVal">269.24 m</b></div>
+                <div>GL: <b id="hudGlVal">266.30 m</b></div>
+                <div>Bank: <b id="hudBankVal">+2.94 m</b></div>
+                <div class="hud-grad-tag" id="hudGradientText">Gradient: 1 in 1000 RISING</div>
+              </div>
+            </div>
+
+            <!-- Google Coordinates Link Row -->
+            <div class="hud-gps-row" id="hudGpsRow" style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; background: rgba(15, 23, 42, 0.6); padding: 0.3rem 0.65rem; border-radius: 5px; border: 1px solid rgba(56, 189, 248, 0.25);">
+              <span id="hudGpsText" style="color: #38bdf8; font-family: monospace; font-weight: 700;">📍 GPS: Calculating Coordinates...</span>
+              <a id="hudGpsLink" href="https://www.google.com/maps" target="_blank" class="gps-map-link" style="color: #facc15; text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(234, 179, 8, 0.15); padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid rgba(234, 179, 8, 0.35);" title="Open this location in Google Maps">🗺️ Open in Google Maps ↗️</a>
+            </div>
+
+            <div class="hud-assets-row" id="hudAssetText">
+              Nearest Assets: Scanning track features...
+            </div>
+
+            <div class="hud-staff-grid">
+              <div class="staff-card-mini">
+                <div class="staff-info">
+                  <span class="staff-role-title" style="color: #a855f7;">👷 KEYMAN</span>
+                  <span class="staff-name-text" id="hudKeymanName">Scanning...</span>
+                </div>
+                <a href="#" class="call-btn" id="hudKeymanCallBtn" onclick="linearViewer.callKeyman(event)">📞 Call</a>
+              </div>
+
+              <div class="staff-card-mini">
+                <div class="staff-info">
+                  <span class="staff-role-title" style="color: #34d399;">🛡️ PATROLMAN</span>
+                  <span class="staff-name-text" id="hudPatrolmanName">Scanning...</span>
+                </div>
+                <a href="#" class="call-btn" id="hudPatrolmanCallBtn" onclick="linearViewer.callPatrolman(event)">📞 Call</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Canvas Viewport (100% Unobstructed Chart) -->
+          <div class="canvas-viewport" id="canvasViewport">
+            <canvas id="linearTrackCanvas"></canvas>
+          </div>
+            <canvas id="linearTrackCanvas"></canvas>
+          </div>
+
+          <!-- 4. Minimap Scrubber Bar -->
+          <div class="linear-minimap-bar" id="linearMinimapBar">
+            <canvas id="minimapCanvas"></canvas>
+            <div class="minimap-viewport-box" id="minimapViewportBox"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. CHAINAGE LOCATOR TAB -->
+      <section id="tab-chainage-locator" class="tab-pane" style="display: none;">
+        <div class="chainage-hero">
+          <h2>📍 Kilometer Chainage Inspector</h2>
+          <p style="color: var(--text-secondary); max-width: 600px;">
+            Enter any track chainage kilometer to instantly look up the responsible Keyman beat, block section, nearest bridges, curves, turnouts, defects, and engineering drawings.
+          </p>
+          <div class="chainage-input-group">
+            <input type="number" step="0.001" id="chainageInput" placeholder="e.g. 1175.500 or 1205.200" value="1175.500">
+            <button class="btn btn-primary" id="chainageLookupBtn">Inspect Chainage</button>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button class="btn" onclick="app.lookupChainage(1169.5)">SMUN Yard (1169.5)</button>
+            <button class="btn" onclick="app.lookupChainage(1188.5)">SBJN Yard (1188.5)</button>
+            <button class="btn" onclick="app.lookupChainage(1202.0)">NSIR Yard (1202.0)</button>
+            <button class="btn" onclick="app.lookupChainage(1215.0)">GVGN Yard (1215.0)</button>
+            <button class="btn" onclick="app.lookupChainage(1237.0)">CHAN Yard (1237.0)</button>
+          </div>
+        </div>
+
+        <div id="chainageResultsContainer" class="chainage-results" style="display: none;">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 3. BRIDGES TAB -->
+      <section id="tab-bridges" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>🌉</span> Railway Bridges Directory (<span id="bridgesCount">0</span>)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="bridgeSearch" placeholder="Search Bridge No, Section...">
+              <select class="filter-input" id="bridgeTypeFilter">
+                <option value="">All Bridge Types</option>
+                <option value="MJB">Major Bridge (MJB)</option>
+                <option value="MIB">Minor Bridge (MIB)</option>
+                <option value="ROB">Road Over Bridge (ROB)</option>
+                <option value="RUB">Road Under Bridge (RUB)</option>
+                <option value="FOB">Foot Over Bridge (FOB)</option>
+                <option value="OWG">Open Web Girder (OWG)</option>
+              </select>
+              <select class="filter-input" id="bridgeSectionFilter">
+                <option value="">All Sections</option>
+              </select>
+              <button class="btn" onclick="app.exportTableCSV('bridgesTable', 'Bridges_SMUN_SNL.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="bridgesTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>Bridge No</th>
+                  <th>Section</th>
+                  <th>Km From</th>
+                  <th>Km To</th>
+                  <th>Type</th>
+                  <th>Span Config</th>
+                  <th>Length (m)</th>
+                  <th>Linear Waterway</th>
+                  <th>Old Bridge No</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. CURVES TAB -->
+      <section id="tab-curves" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>🔄</span> Track Curves Master (<span id="curvesCount">0</span>)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="curveSearch" placeholder="Search Curve No, Km...">
+              <select class="filter-input" id="curveRadiusFilter">
+                <option value="">All Radii</option>
+                <option value="sharp">Sharp (R &lt; 2000m)</option>
+                <option value="medium">Medium (2000m - 4000m)</option>
+                <option value="gentle">Gentle (R &gt; 4000m)</option>
+              </select>
+              <button class="btn" onclick="app.exportTableCSV('curvesTable', 'Curves_SMUN_SNL.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="curvesTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>Curve No</th>
+                  <th>Km From</th>
+                  <th>Km To</th>
+                  <th>Length (m)</th>
+                  <th>Degree (°)</th>
+                  <th>Radius (m)</th>
+                  <th>Speed (km/h)</th>
+                  <th>Transition (m)</th>
+                  <th>Circular (m)</th>
+                  <th>Cant / SE (mm)</th>
+                  <th>Remarks / Yard</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. POINTS & CROSSINGS TAB -->
+      <section id="tab-pnc" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>🔀</span> Points & Crossings / Turnouts (<span id="pncCount">0</span>)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="pncSearch" placeholder="Search Point No, Station...">
+              <select class="filter-input" id="pncStationFilter">
+                <option value="">All Stations</option>
+              </select>
+              <select class="filter-input" id="pncAngleFilter">
+                <option value="">All Angles</option>
+                <option value="1/12">1 in 12</option>
+                <option value="1/8.5">1 in 8.5</option>
+              </select>
+              <button class="btn" onclick="app.exportTableCSV('pncTable', 'Points_and_Crossings.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="pncTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>Station</th>
+                  <th>Point No</th>
+                  <th>Line</th>
+                  <th>Angle</th>
+                  <th>SRJ Chainage (Km)</th>
+                  <th>Laid On</th>
+                  <th>Turnout (LH/RH)</th>
+                  <th>Traffic</th>
+                  <th>SE</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. LOOP LINES & YARDS TAB -->
+      <section id="tab-loop-lines" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>🛤️</span> Station Loop Lines & Sidings (<span id="loopLinesCount">0</span>)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="loopLineSearch" placeholder="Search Station, Line name...">
+              <select class="filter-input" id="loopStationFilter">
+                <option value="">All Stations</option>
+              </select>
+              <button class="btn" onclick="app.exportTableCSV('loopLinesTable', 'Loop_Line_Data.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="loopLinesTable">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Line Name</th>
+                  <th>Crossover</th>
+                  <th>Km From</th>
+                  <th>Met From</th>
+                  <th>Ch From</th>
+                  <th>Km To</th>
+                  <th>Met To</th>
+                  <th>Ch To</th>
+                  <th>Length (Km)</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. LWR & SEJ TAB -->
+      <section id="tab-lwr-sej" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>📏</span> Long Welded Rails (LWR) & Switch Expansion Joints (SEJ)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="lwrSearch" placeholder="Search LWR No, Section...">
+              <button class="btn" onclick="app.exportTableCSV('lwrTable', 'LWR_SEJ_Data.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="lwrTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>LWR No</th>
+                  <th>Section</th>
+                  <th>SRJ From (Km)</th>
+                  <th>SRJ To (Km)</th>
+                  <th>Length (Km)</th>
+                  <th>Gap Measured On</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. DEFECTS & DFWO TAB -->
+      <section id="tab-defects" class="tab-pane" style="display: none;">
+        <div class="content-card" style="margin-bottom: 1.5rem;">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>⚠️</span> Digital Fatigued Welds / Defective Rails (DFWO)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="dfwoSearch" placeholder="Search Defect No, Km, Line...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="dfwoTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>Km</th>
+                  <th>Meter</th>
+                  <th>Chainage (Km)</th>
+                  <th>Defect No / Rail</th>
+                  <th>Line / Loop Line</th>
+                  <th>Remark / Section</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>🔍</span> Points & Crossings Wear Measurements & Defects</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="turnoutDefectsTable">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Point No</th>
+                  <th>Line</th>
+                  <th>Angle</th>
+                  <th>SRJ Chainage</th>
+                  <th>Nose Wear (LH / Nose / RH)</th>
+                  <th>269mm Wear (LH / Nose / RH)</th>
+                  <th>Remark</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. STAFF DIRECTORY TAB -->
+      <section id="tab-staff" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>👷</span> IMSD SMUN Personnel Directory</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="staffSearch" placeholder="Search Name, AWPO ID, Beat, Mobile...">
+              <select class="filter-input" id="staffRoleFilter">
+                <option value="">All Roles</option>
+                <option value="KEYMAN">Keyman</option>
+                <option value="GATEMAN">Gateman</option>
+                <option value="PATROLMAN">Patrolman</option>
+                <option value="APM">Officers / APM</option>
+              </select>
+            </div>
+          </div>
+          <div class="staff-grid" id="staffCardsGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. DRAWINGS TAB -->
+      <section id="tab-drawings" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>📜</span> Engineering Scale Plans (ESP) & Plan & Profile (P&P) Drawings (<span id="drawingsCount">0</span>)</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="drawingSearch" placeholder="Search Drawing name, Sheet No...">
+              <select class="filter-input" id="drawingKmFilter">
+                <option value="">All KM Ranges (DFCC & Link Line)</option>
+                <option value="1167">DFCC KM 1167 - 1178 (SMUN - SBJN)</option>
+                <option value="1178">DFCC KM 1178 - 1188 (SBJN Yard)</option>
+                <option value="1188">DFCC KM 1188 - 1202 (SBJN - NSIR)</option>
+                <option value="1202">DFCC KM 1202 - 1213 (NSIR - GVGN)</option>
+                <option value="1213">DFCC KM 1213 - 1224 (GVGN - KNNN)</option>
+                <option value="1224">DFCC KM 1224 - 1237 (KNNN - CHAN)</option>
+                <option value="1237">DFCC KM 1237 - 1250 (CHAN - SNL)</option>
+                <option value="ESP">ESP Station Yards (CAD)</option>
+              </select>
+              <select class="filter-input" id="drawingCategoryFilter">
+                <option value="">All Categories</option>
+                <option value="Plan & Profile">Plan & Profile Sheets</option>
+                <option value="Link Line">Link Line Sheets</option>
+                <option value="Combined">Combined P&P</option>
+                <option value="Legend">Legends & Covers</option>
+                <option value="ESP">ESP CADs</option>
+              </select>
+            </div>
+          </div>
+          <div class="drawings-grid" id="drawingsGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. STORE TAB -->
+      <section id="tab-store" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>📦</span> IMSD New Shambhu P-Way Store Materials</h3>
+            <div class="filter-bar">
+              <input type="text" class="filter-input" id="storeSearch" placeholder="Search Item, Ledger Page...">
+              <button class="btn" onclick="app.exportTableCSV('storePwayTable', 'Pway_Store_Inventory.csv')">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="storePwayTable">
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>Particulars / Item Description</th>
+                  <th>Ledger Page</th>
+                  <th>Receipt</th>
+                  <th>Transfer</th>
+                  <th>Issues</th>
+                  <th>Balance</th>
+                  <th>Unit</th>
+                  <th>Stock Status</th>
+                </tr>
+              </thead>
+              <tbody><!-- Populated dynamically --></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12. TRC TAB -->
+      <section id="tab-trc" class="tab-pane" style="display: none;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title"><span>📉</span> Track Recording Car (TRC) Inspection Report</h3>
+            <div class="badge-pill badge-bridge">Run Date: 24.08.2026</div>
+          </div>
+          <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-title">Section</div>
+                <div class="stat-value" style="font-size: 1.25rem;">SNL - UBCD (SL)</div>
+                <div class="stat-desc">Km 1250 to 1159</div>
+              </div>
+              <div class="stat-card red">
+                <div class="stat-title">Fastening Defects</div>
+                <div class="stat-value">106</div>
+                <div class="stat-desc">Missing / Defective clips</div>
+              </div>
+              <div class="stat-card gold">
+                <div class="stat-title">Sleeper Defects</div>
+                <div class="stat-value">15,500</div>
+                <div class="stat-desc">Cracked / spalled sleepers</div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-title">Rail Defects</div>
+                <div class="stat-value">29,509</div>
+                <div class="stat-desc">Wear, corrugation, joints</div>
+              </div>
+              <div class="stat-card indigo">
+                <div class="stat-title">Ballast Defects</div>
+                <div class="stat-value">61,161</div>
+                <div class="stat-desc">Cushion, deficiency, fouling</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem;">
+              <h4 style="margin-bottom: 0.75rem;">Fastening Defect Sample Log</h4>
+              <div class="table-responsive">
+                <table class="data-table" id="trcFasteningTable">
+                  <thead>
+                    <tr>
+                      <th>Km</th>
+                      <th>Meter</th>
+                      <th>Defect Type</th>
+                      <th>Side</th>
+                      <th>Severity</th>
+                      <th>Line</th>
+                      <th>Recommended Action</th>
+                    </tr>
+                  </thead>
+                  <tbody><!-- Populated dynamically --></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- PDF Preview Modal -->
+  <div class="modal-backdrop" id="pdfModal">
+    <div class="modal-dialog large-pdf">
+      <div class="modal-header">
+        <h3 id="pdfModalTitle" style="font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">Drawing Preview</h3>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <a id="pdfDownloadLink" href="#" target="_blank" class="btn btn-primary" style="font-size: 0.8rem;">Open in New Tab ↗</a>
+          <button class="modal-close-btn" onclick="app.closePdfModal()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <iframe id="pdfFrame" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff Photo & QR Modal -->
+  <div class="modal-backdrop" id="staffModal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="staffModalTitle">Staff Details & QR</h3>
+        <button class="modal-close-btn" onclick="app.closeStaffModal()">✕</button>
+      </div>
+      <div class="modal-body" id="staffModalBody" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem;">
+        <!-- Dynamically injected -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Comprehensive Station ESP & CAD Drawing Modal -->
+  <div class="modal-backdrop" id="espModal">
+    <div class="modal-dialog" style="max-width: 950px; width: 95vw; height: 90vh;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem; overflow: hidden;">
+          <span style="font-size: 1.3rem;">📐</span>
+          <h3 id="espModalTitle" style="font-size: 1.1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Station Engineering Scale Plan (ESP) CAD Viewer</h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <a id="espDownloadBtn" href="#" download class="btn btn-primary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">📥 Download DWG</a>
+          <button class="modal-close-btn" onclick="app.closeEspModal()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" id="espModalBody" style="padding: 0; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        <!-- Dynamically injected CAD viewer tabs & interactive view -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vani Linear Track Diagram</title>
+  <style>
+    :root {
+      --bg-primary: #070b14;
+      --bg-secondary: #0f172a;
+      --bg-card: #141f36;
+      --border-color: #223250;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #38bdf8;
+      --railway-gold: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --purple: #a855f7;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #appContainer {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 1. TOP DEDICATED FIXED HUD DETAILS PANEL (No overlap with chart!) */
+    .details-panel {
+      background: var(--bg-secondary);
+      border-bottom: 1.5px solid var(--border-color);
+      padding: 0.4rem 0.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      z-index: 30;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    }
+    .hud-main-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .hud-chainage-badge {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .sec-tag {
+      background: #0284c7;
+      color: #fff;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+    .hud-elev-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      background: #090e1a;
+      padding: 0.2rem 0.45rem;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .hud-elev-bar b { color: #f8fafc; }
+    .hud-grad-tag {
+      margin-left: auto;
+      font-weight: 800;
+      color: #34d399;
+    }
+    .hud-assets-row {
+      font-size: 0.74rem;
+      color: #7dd3fc;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .hud-staff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.1rem;
+    }
+    .staff-card-mini {
+      background: #141f36;
+      border: 1px solid #233454;
+      border-radius: 5px;
+      padding: 0.25rem 0.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.3rem;
+    }
+    .staff-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .staff-role-title {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .staff-name-text {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .call-btn {
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+    .call-btn:active { background: #059669; }
+
+    /* 2. SUB-TOOLBAR (Quick Jump, KM Search, Layer Toggles) */
+    .sub-toolbar {
+      background: #0d1527;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.25rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+    .scroll-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .scroll-row::-webkit-scrollbar { display: none; }
+
+    .st-btn {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .st-btn:active { background: #38bdf8; color: #000; }
+
+    .tool-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tool-btn:active { background: #38bdf8; color: #000; }
+    .tool-btn.gold {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    /* Line Switch & Badge */
+    .line-switch-container {
+      display: inline-flex;
+      background: #090e1a;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 1px;
+      gap: 1px;
+    }
+    .line-switch-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .line-switch-btn.active {
+      background: #0284c7;
+      color: #fff;
+    }
+    .line-switch-btn.link-active {
+      background: #f59e0b;
+      color: #000;
+    }
+    .line-badge {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 800;
+    }
+    .line-badge.link {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #f59e0b;
+      color: #fbbf24;
+    }
+
+    .km-search-box {
+      display: inline-flex;
+      align-items: center;
+      background: #090e1a;
+      border: 1px solid #283a5c;
+      border-radius: 4px;
+      padding: 0.08rem 0.3rem;
+      gap: 0.2rem;
+    }
+    .km-search-box input {
+      width: 65px;
+      border: none;
+      background: transparent;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      outline: none;
+    }
+    .km-search-box button {
+      background: #0284c7;
+      border: none;
+      color: #fff;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .layer-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.68rem;
+      color: #cbd5e1;
+      background: #090e1a;
+      padding: 0.12rem 0.35rem;
+      border-radius: 4px;
+      border: 1px solid #223250;
+    }
+    .layer-chip input { cursor: pointer; }
+
+    /* 3. CANVAS VIEWPORT (Remaining 100% Height, Perfectly Visible!) */
+    .viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #070b14;
+      cursor: grab;
+      touch-action: none;
+      overflow: hidden;
+    }
+    canvas#trackCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 4. MODAL FOR P&P DRAWINGS */
+    .dwg-modal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: blur(8px);
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      padding: 0.8rem;
+    }
+    .dwg-modal.open { display: flex; }
+    .dwg-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border-color);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+    .dwg-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .dwg-item {
+      background: #131d31;
+      border: 1px solid #223250;
+      border-radius: 6px;
+      padding: 0.5rem 0.7rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dwg-item:active { background: #1e293b; }
+    .dwg-item-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .dwg-item-sub {
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+
+    /* CAD Viewer UI */
+    .cad-viewer-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      background: #090d16;
+    }
+    .cad-toolbar {
+      background: #0b1222;
+      border-bottom: 1px solid #1e293b;
+      padding: 0.35rem 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.35rem;
+      overflow-x: auto;
+    }
+    .cad-toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+    }
+    .cad-btn {
+      background: #131d31;
+      border: 1px solid #223250;
+      color: #cbd5e1;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .cad-btn.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .cad-btn:active {
+      background: #0369a1;
+    }
+    .cad-meta-strip {
+      background: #0b1120;
+      border-top: 1px solid #1e293b;
+      padding: 0.3rem 0.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: #94a3b8;
+    }
+
+    /* 5. MINIMAP */
+    .minimap-bar {
+      height: 26px;
+      background: #080c16;
+      border-top: 1px solid var(--border-color);
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    canvas#minimapCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .minimap-box {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      background: rgba(56, 189, 248, 0.3);
+      border: 1.5px solid var(--accent);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+  </style>
+  <script src="track_data.js"></script>
+</head>
+<body>
+
+<div id="appContainer">
+  <!-- 1. SUB-TOOLBAR (Upar wala - moved to top) -->
+  <div class="sub-toolbar">
+    <div class="scroll-row">
+      
+      <!-- Line Switch Toggle -->
+      <div class="line-switch-container">
+        <button class="line-switch-btn active" id="btnSwitchMainLine" onclick="setLineMode('main')">Main Line</button>
+        <button class="line-switch-btn" id="btnSwitchLinkLine" onclick="setLineMode('link')">Link Line</button>
+      </div>
+
+      <button class="st-btn" onclick="flyToKm(1169.5)">SMUN</button>
+      <button class="st-btn" onclick="flyToKm(1188.5)">SBJN</button>
+      <button class="st-btn" onclick="flyToKm(1202.0)">NSIR</button>
+      <button class="st-btn" onclick="flyToKm(1213.2)">GVGN</button>
+      <button class="st-btn" onclick="flyToKm(1229.0)">KNNN</button>
+      <button class="st-btn" onclick="flyToKm(1237.5)">CHAN</button>
+      <button class="st-btn" onclick="flyToKm(1249.7)">SNL</button>
+      <button class="tool-btn" style="background:#0284c7; color:#fff; font-weight:800;" onclick="openStationEsp(currentStationCode || 'SMUN')">⚡ X-Ray Plan</button>
+      
+      <button class="tool-btn gold" onclick="openDrawingsModal()">📜 All P&P Plans (<span id="dwgTotalCount">0</span>)</button>
+      <button class="tool-btn" id="hudDwgQuickBtn" onclick="downloadCurrentKmDrawing()" style="display:none; background:#0284c7;">📥 Open P&P Sheet</button>
+    </div>
+
+    <div class="scroll-row">
+      <div class="km-search-box">
+        <span style="font-size:0.7rem; color:#94a3b8;">KM:</span>
+        <input type="number" step="0.1" id="quickKmInput" placeholder="1175.5">
+        <button onclick="searchQuickKm()">GO</button>
+      </div>
+
+      <button class="tool-btn" onclick="zoomBy(1.6)">🔍+</button>
+      <button class="tool-btn" onclick="zoomBy(0.62)">🔍-</button>
+      <button class="tool-btn" onclick="fitAll()">↔ Fit</button>
+
+      <label class="layer-chip"><input type="checkbox" id="chkKeyman" checked onchange="toggleLayer('keymen', this.checked)"> 👷 Keymen</label>
+      <label class="layer-chip"><input type="checkbox" id="chkPatrolman" checked onchange="toggleLayer('patrolmen', this.checked)"> 🛡️ Patrolmen</label>
+      <label class="layer-chip"><input type="checkbox" id="chkCurves" checked onchange="toggleLayer('curves', this.checked)"> Curves</label>
+      <label class="layer-chip"><input type="checkbox" id="chkBridges" checked onchange="toggleLayer('bridges', this.checked)"> Bridges</label>
+      <label class="layer-chip"><input type="checkbox" id="chkTurnouts" checked onchange="toggleLayer('pnc', this.checked)"> Turnouts</label>
+      <label class="layer-chip"><input type="checkbox" id="chkGrad" checked onchange="toggleLayer('gradients', this.checked)"> Gradients</label>
+    </div>
+  </div>
+
+  <!-- 2. ATTACHMENT DETAILS PANEL (Diagram ke just upar) -->
+  <div class="details-panel" id="detailsPanel">
+    <div class="hud-main-row">
+      <div class="hud-chainage-badge">
+        <span id="hudKmText">KM 1169.500</span>
+        <span class="sec-tag" id="hudSecText">SMUN Yard</span>
+        <span class="line-badge" id="hudLineBadge">MAIN LINE</span>
+      </div>
+      <div class="hud-elev-bar">
+        <span>PFL: <b id="hudPflVal" style="color:#38bdf8;">--</b></span>
+        <span>GL: <b id="hudGlVal" style="color:#f59e0b;">--</b></span>
+        <span>Bank: <b id="hudBankVal" style="color:#fff;">--</b></span>
+        <span class="hud-grad-tag" id="hudGradText">1 in 1000 RISING</span>
+      </div>
+    </div>
+
+    <!-- Google Coordinates Link Row -->
+    <div class="hud-gps-row" id="hudGpsRow" style="display:flex; align-items:center; justify-content:space-between; font-size:0.75rem; background:rgba(15,23,42,0.6); padding:0.25rem 0.5rem; border-radius:4px; border:1px solid rgba(56,189,248,0.25);">
+      <span id="hudGpsText" style="color:#38bdf8; font-family:monospace; font-weight:700;">📍 GPS: Calculating...</span>
+      <a id="hudGpsLink" href="#" target="_blank" class="tool-btn gold" style="font-size:0.68rem; padding:0.15rem 0.4rem; text-decoration:none;" onclick="openGoogleMaps(event)">🗺️ Google Maps ↗️</a>
+    </div>
+
+    <div class="hud-assets-row" id="hudAssetText">
+      <span>📍 Nearest Assets: Scanning corridor...</span>
+    </div>
+
+    <div class="hud-staff-grid">
+      <!-- Keyman Card with direct CALL action -->
+      <div class="staff-card-mini">
+        <div class="staff-info">
+          <span class="staff-role-title" style="color:#c4b5fd;">👷 Keyman</span>
+          <span class="staff-name-text" id="hudKeymanName">Sanjeev Kumar (Beat 19)</span>
+        </div>
+        <a id="keymanCallBtn" href="tel:" class="call-btn" onclick="callKeyman(event)">📞 Call</a>
+      </div>
+
+      <!-- Patrolman Card with direct CALL action -->
+      <div class="staff-card-mini">
+        <div class="staff-info">
+          <span class="staff-role-title" style="color:#6ee7b7;">🛡️ Patrolman</span>
+          <span class="staff-name-text" id="hudPatrolmanName">Salamundin (SPN-12)</span>
+        </div>
+        <a id="patrolmanCallBtn" href="tel:" class="call-btn" onclick="callPatrolman(event)">📞 Call</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CANVAS VIEWPORT (Vertically unblocked) -->
+  <div class="viewport" id="viewport">
+    <canvas id="trackCanvas"></canvas>
+
+    <!-- P&P Drawing List Modal -->
+    <div class="dwg-modal" id="dwgModal">
+      <div class="dwg-modal-header">
+        <span>📜 Plan & Profile Drawings (DFCC Chainage)</span>
+        <button class="tool-btn" onclick="closeDrawingsModal()">✕ Close</button>
+      </div>
+      <div style="padding:0.35rem 0;">
+        <input type="text" id="modalDwgSearch" placeholder="Search KM or Sheet No..." oninput="filterModalDrawings()" style="width:100%; padding:0.35rem; border-radius:4px; border:1px solid #334155; background:#0f172a; color:#fff; font-size:0.8rem;">
+      </div>
+      <div class="dwg-list" id="dwgListContainer"></div>
+    </div>
+
+    <!-- Station ESP CAD Viewer Modal -->
+    <div class="dwg-modal" id="espModal" style="padding:0; background:rgba(6,10,18,0.98); z-index:70;">
+      <div class="dwg-modal-header" style="padding:0.5rem 0.7rem; background:#0b1120; border-bottom:1px solid #1e293b;">
+        <div style="display:flex; align-items:center; gap:0.4rem; overflow:hidden; flex:1;">
+          <span style="font-size:1.1rem;">📐</span>
+          <span id="espModalTitle" style="font-size:0.82rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Station Engineering Scale Plan (ESP) CAD</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.35rem;">
+          <button id="espDownloadBtn" class="tool-btn gold" onclick="downloadCurrentEsp()">📥 DWG</button>
+          <button class="tool-btn" onclick="closeEspModal()">✕ Close</button>
+        </div>
+      </div>
+      <div id="espModalBody" style="flex:1; display:flex; flex-direction:column; overflow:hidden; height:100%;"></div>
+    </div>
+  </div>
+
+  <!-- 4. MINIMAP -->
+  <div class="minimap-bar" id="minimapBar">
+    <canvas id="minimapCanvas"></canvas>
+    <div class="minimap-box" id="minimapBox"></div>
+  </div>
+</div>
+
+<script>
+// Data Initialization from bundled window.VANI_TRACK_DATA
+let DB = window.VANI_TRACK_DATA || {
+  sections: [],
+  bridges: [],
+  curves: [],
+  points_and_crossings: [],
+  loop_lines: [],
+  master_staff: [],
+  profile: { points: [], gradients: [], high_banks: [] },
+  drawings: []
+};
+
+let lineMode = 'main';
+const mainMinKm = 1167.2;
+const mainMaxKm = 1250.0;
+const linkMinKm = 1171.6606;
+const linkMaxKm = 1178.4476;
+
+let minKm = 1167.2;
+let maxKm = 1250.0;
+let minElev = 240.0;
+let maxElev = 285.0;
+
+let viewKmStart = 1167.2;
+let viewKmSpan = 2.8; // Yard level scale
+let width = 0;
+let height = 0;
+let dpr = window.devicePixelRatio || 1;
+
+let canvas, ctx, minimapCanvas, minimapCtx, minimapBox;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartKm = 0;
+let mouseX = -1;
+let currentKm = 1169.5;
+let renderRequested = false;
+
+let initialTouchDist = 0;
+let initialTouchSpan = 2.8;
+
+// Current staff contacts for calling
+let currentKeymanMobile = "";
+let currentPatrolmanMobile = "";
+let currentMatchedDrawing = null;
+let currentStationCode = "SMUN";
+let currentEspDrawing = null;
+let cadCanvas = null;
+let cadCtx = null;
+let cadStation = "SMUN";
+let cadTransform = null;
+let cadW = 0;
+let cadH = 0;
+let cadMinCh = 1168.0;
+let cadMaxCh = 1171.0;
+
+const layers = {
+  keymen: true,
+  patrolmen: true,
+  curves: true,
+  bridges: true,
+  gradients: true,
+  pnc: true,
+  loop_lines: true
+};
+
+function setLineMode(mode) {
+  lineMode = mode;
+  const btnMain = document.getElementById('btnSwitchMainLine');
+  const btnLink = document.getElementById('btnSwitchLinkLine');
+  const badge = document.getElementById('hudLineBadge');
+
+  if (mode === 'link') {
+    btnMain.classList.remove('active');
+    btnLink.classList.add('active', 'link-active');
+    if (badge) {
+      badge.textContent = 'LINK LINE (SMUN-RPJ)';
+      badge.className = 'line-badge link';
+    }
+    minKm = linkMinKm;
+    maxKm = linkMaxKm;
+    minElev = 258.0;
+    maxElev = 276.0;
+    viewKmStart = linkMinKm;
+    viewKmSpan = linkMaxKm - linkMinKm;
+  } else {
+    btnLink.classList.remove('active', 'link-active');
+    btnMain.classList.add('active');
+    if (badge) {
+      badge.textContent = 'MAIN LINE';
+      badge.className = 'line-badge';
+    }
+    minKm = mainMinKm;
+    maxKm = mainMaxKm;
+    minElev = 240.0;
+    maxElev = 285.0;
+    viewKmStart = 1167.2;
+    viewKmSpan = 2.8;
+  }
+  requestRender();
+}
+
+function toggleLayer(name, val) {
+  layers[name] = val;
+  requestRender();
+}
+
+function kmToScreenX(km) {
+  return ((km - viewKmStart) / viewKmSpan) * width;
+}
+
+function screenXToKm(x) {
+  return viewKmStart + (x / width) * viewKmSpan;
+}
+
+function elevToScreenY(elev, topY, bottomY) {
+  const norm = (elev - minElev) / (maxElev - minElev);
+  return bottomY - norm * (bottomY - topY);
+}
+
+function flyToKm(km) {
+  viewKmSpan = 2.5;
+  viewKmStart = km - viewKmSpan / 2;
+  currentKm = km;
+  mouseX = width / 2;
+  updateCurrentStation(km);
+  requestRender();
+}
+
+function searchQuickKm() {
+  const v = parseFloat(document.getElementById('quickKmInput').value);
+  if (!isNaN(v) && v >= minKm && v <= maxKm) {
+    flyToKm(v);
+  } else {
+    alert(`Please enter a valid chainage between ${minKm} and ${maxKm}`);
+  }
+}
+
+function zoomBy(factor) {
+  const centerKm = viewKmStart + viewKmSpan / 2;
+  zoomAtKm(centerKm, 1 / factor);
+}
+
+function zoomAtKm(centerKm, factor) {
+  const oldSpan = viewKmSpan;
+  const newSpan = Math.max(0.12, Math.min(maxKm - minKm, oldSpan * factor));
+  const ratio = (centerKm - viewKmStart) / oldSpan;
+  viewKmSpan = newSpan;
+  viewKmStart = centerKm - ratio * newSpan;
+  requestRender();
+}
+
+function fitAll() {
+  viewKmStart = minKm;
+  viewKmSpan = maxKm - minKm;
+  requestRender();
+}
+
+function requestRender() {
+  if (!renderRequested) {
+    renderRequested = true;
+    requestAnimationFrame(() => {
+      renderRequested = false;
+      render();
+    });
+  }
+}
+
+function resize() {
+  const vp = document.getElementById('viewport');
+  if (!vp || !canvas) return;
+  dpr = window.devicePixelRatio || 1;
+  const rect = vp.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
+
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+
+  if (minimapCanvas) {
+    const mmRect = minimapCanvas.getBoundingClientRect();
+    minimapCanvas.width = Math.floor(mmRect.width * dpr);
+    minimapCanvas.height = Math.floor(mmRect.height * dpr);
+    if (minimapCtx) {
+      minimapCtx.setTransform(1, 0, 0, 1, 0, 0);
+      minimapCtx.scale(dpr, dpr);
+    }
+  }
+}
+
+function getLOD() {
+  if (viewKmSpan > 25.0) return 1;
+  if (viewKmSpan > 4.5) return 2;
+  return 3;
+}
+
+// Phone Calling actions with native fallback
+function callKeyman(e) {
+  if (e) e.preventDefault();
+  if (currentKeymanMobile) {
+    if (window.AndroidNative && window.AndroidNative.dialPhoneNumber) {
+      window.AndroidNative.dialPhoneNumber(currentKeymanMobile);
+    } else {
+      window.location.href = `tel:${currentKeymanMobile}`;
+    }
+  } else {
+    alert("Mobile number not available for active Keyman.");
+  }
+}
+
+function callPatrolman(e) {
+  if (e) e.preventDefault();
+  if (currentPatrolmanMobile) {
+    if (window.AndroidNative && window.AndroidNative.dialPhoneNumber) {
+      window.AndroidNative.dialPhoneNumber(currentPatrolmanMobile);
+    } else {
+      window.location.href = `tel:${currentPatrolmanMobile}`;
+    }
+  } else {
+    alert("Mobile number not available for active Patrolman.");
+  }
+}
+
+function downloadCurrentKmDrawing() {
+  if (currentMatchedDrawing) {
+    openDrawingDirect(currentMatchedDrawing.url || currentMatchedDrawing.filename || currentMatchedDrawing.name);
+  }
+}
+
+function openDrawingDirect(dwgRef) {
+  let fileUrl = dwgRef;
+  if (!fileUrl.startsWith('http') && !fileUrl.startsWith('/')) {
+    fileUrl = `/media/data/P&P/${dwgRef}`;
+  }
+  if (!fileUrl.startsWith('http')) {
+    fileUrl = `http://10.128.241.18:8080${fileUrl}`;
+  }
+  if (window.AndroidNative && window.AndroidNative.openDrawingUrl) {
+    window.AndroidNative.openDrawingUrl(fileUrl);
+  } else {
+    window.open(fileUrl, '_blank');
+  }
+}
+
+// Main Render Loop
+function render() {
+  if (!ctx || width <= 0 || height <= 0) return;
+  const W = width;
+  const H = height;
+  const lod = getLOD();
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#070b14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Vertically compact split for mobile: 48% Plan, 52% Profile
+  const planH = Math.floor(H * 0.48);
+  const dividerY = planH;
+  const profileTopY = dividerY + 24;
+  const profileBottomY = H - 34;
+  const gradBandY = H - 30;
+
+  // 1. Plan View Layers
+  if (lineMode === 'main') {
+    renderSections(ctx, W, dividerY);
+    if (layers.keymen) renderKeymen(ctx, W, dividerY, lod);
+    if (layers.patrolmen) renderPatrolmen(ctx, W, dividerY, lod);
+    renderChainageRuler(ctx, W, dividerY, lod);
+    renderStationYards(ctx, W, dividerY, lod);
+    if (layers.curves) renderCurves(ctx, W, dividerY, lod);
+    if (layers.loop_lines) renderLoopLines(ctx, W, dividerY, lod);
+    renderMainTrack(ctx, W, dividerY, lod);
+    if (layers.bridges) renderBridges(ctx, W, dividerY, lod);
+    if (layers.pnc) renderTurnouts(ctx, W, dividerY, lod);
+  } else {
+    // LINK LINE PLAN VIEW
+    renderLinkLinePlan(ctx, W, dividerY, lod);
+  }
+
+  // 2. Middle Divider
+  ctx.strokeStyle = '#223250';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, dividerY);
+  ctx.lineTo(W, dividerY);
+  ctx.stroke();
+
+  // Section Header
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold 9px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(lineMode === 'link' ? 'LINK LINE PROFILE (PFL & GL) - SURVEYED ELEVATIONS (m)' : 'LONGITUDINAL PROFILE (PFL & GL) - SURVEYED ELEVATIONS (m)', 10, dividerY + 14);
+
+  // 3. Elevation & Profile Layers
+  renderElevationGrid(ctx, W, profileTopY, profileBottomY);
+  renderHighBanks(ctx, W, profileTopY, profileBottomY, lod);
+  renderLongitudinalProfile(ctx, W, profileTopY, profileBottomY);
+  if (layers.gradients) renderGradients(ctx, W, gradBandY, lod);
+
+  // 4. Single Crosshair Line & Update HUD
+  const activeX = (mouseX >= 0 && mouseX <= W) ? mouseX : kmToScreenX(currentKm);
+  if (activeX >= 0 && activeX <= W) {
+    const curK = screenXToKm(activeX);
+    renderCrosshair(ctx, activeX, H, curK);
+    updateHUD(curK);
+  }
+
+  // 5. Minimap
+  renderMinimap();
+}
+
+function renderSections(ctx, W, dividerY) {
+  (DB.sections || []).forEach((sec, idx) => {
+    const x1 = kmToScreenX(sec.km_from);
+    const x2 = kmToScreenX(sec.km_to);
+    if (x2 < 0 || x1 > W) return;
+    ctx.fillStyle = idx % 2 === 0 ? 'rgba(30, 41, 59, 0.22)' : 'rgba(15, 23, 42, 0.45)';
+    ctx.fillRect(Math.max(0, x1), 0, Math.min(W, x2) - Math.max(0, x1), dividerY);
+  });
+}
+
+function renderKeymen(ctx, W, dividerY, lod) {
+  const staff = (DB.master_staff || []).filter(s => (s.designation || '').toUpperCase().includes('KEYMAN'));
+  staff.forEach(s => {
+    if (!s.km_from || !s.km_to) return;
+    const x1 = kmToScreenX(s.km_from);
+    const x2 = kmToScreenX(s.km_to);
+    if (x2 < 0 || x1 > W) return;
+
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x1, 24);
+    ctx.lineTo(x1, dividerY - 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (x2 - x1 > 60) {
+      ctx.fillStyle = '#c4b5fd';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`👷 ${s.beat_no}: ${(s.name || '').split(' ')[0]}`, Math.max(6, x1 + 4), dividerY - 18);
+    }
+  });
+}
+
+function renderPatrolmen(ctx, W, dividerY, lod) {
+  const staff = (DB.master_staff || []).filter(s => (s.designation || '').toLowerCase().includes('patrol'));
+  staff.forEach((s, idx) => {
+    if (!s.km_from || !s.km_to) return;
+    const x1 = kmToScreenX(s.km_from);
+    const x2 = kmToScreenX(s.km_to);
+    if (x2 < 0 || x1 > W) return;
+
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, 28);
+    ctx.lineTo(x1, dividerY - 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (x2 - x1 > 80) {
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      const labelY = (idx % 2 === 0) ? (dividerY - 8) : (dividerY - 1);
+      ctx.fillText(`🛡️ ${s.beat_no}: ${(s.name || '').split(' ')[0]}`, Math.max(6, x1 + 4), labelY);
+    }
+  });
+}
+
+function renderChainageRuler(ctx, W, dividerY, lod) {
+  ctx.fillStyle = '#0b1120';
+  ctx.fillRect(0, 0, W, 20);
+  ctx.strokeStyle = '#223250';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 20);
+  ctx.lineTo(W, 20);
+  ctx.stroke();
+
+  let stepKm = 1.0;
+  if (viewKmSpan > 35) stepKm = 5.0;
+  else if (viewKmSpan > 12) stepKm = 2.0;
+  else if (viewKmSpan < 0.8) stepKm = 0.1;
+  else if (viewKmSpan < 2.5) stepKm = 0.5;
+
+  const startTick = Math.floor(viewKmStart / stepKm) * stepKm;
+  const endTick = Math.ceil((viewKmStart + viewKmSpan) / stepKm) * stepKm;
+
+  for (let k = startTick; k <= endTick; k += stepKm) {
+    const x = kmToScreenX(k);
+    if (x < -20 || x > W + 20) continue;
+    const isKmPost = Math.abs(k - Math.round(k)) < 0.001;
+
+    ctx.strokeStyle = isKmPost ? '#94a3b8' : '#334155';
+    ctx.lineWidth = isKmPost ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x, isKmPost ? 5 : 12);
+    ctx.lineTo(x, 20);
+    ctx.stroke();
+
+    if (isKmPost) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.round(k)}`, x, 14);
+    }
+  }
+}
+
+function renderStationYards(ctx, W, dividerY, lod) {
+  const stations = [
+    { code: 'SMUN', km: 1169.5, name: 'New Shambhu' },
+    { code: 'SBJN', km: 1188.5, name: 'Sarai Banjara' },
+    { code: 'NSIR', km: 1202.0, name: 'Sirhind' },
+    { code: 'GVGN', km: 1213.2, name: 'Gobindgarh' },
+    { code: 'KNNN', km: 1229.0, name: 'Khanna' },
+    { code: 'CHAN', km: 1237.5, name: 'Chawa Pail' },
+    { code: 'SNL',  km: 1249.7, name: 'Sanehwal' }
+  ];
+
+  stations.forEach(st => {
+    const x = kmToScreenX(st.km);
+    if (x < -100 || x > W + 100) return;
+
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, dividerY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0284c7';
+    const tagW = 50;
+    ctx.fillRect(x - tagW/2, 2, tagW, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(st.code, x, 13);
+
+    if (lod >= 2) {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+      ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText(st.name, x, dividerY - 10);
+    }
+  });
+}
+
+function renderMainTrack(ctx, W, dividerY, lod) {
+  const trackY = Math.floor(dividerY * 0.52);
+
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(0, trackY - 3.5);
+  ctx.lineTo(W, trackY - 3.5);
+  ctx.moveTo(0, trackY + 3.5);
+  ctx.lineTo(W, trackY + 3.5);
+  ctx.stroke();
+
+  if (lod >= 3) {
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1;
+    const sleeperStep = 0.005;
+    const s1 = Math.floor(viewKmStart / sleeperStep) * sleeperStep;
+    const s2 = Math.ceil((viewKmStart + viewKmSpan) / sleeperStep) * sleeperStep;
+    ctx.beginPath();
+    for (let k = s1; k <= s2; k += sleeperStep) {
+      const sx = kmToScreenX(k);
+      ctx.moveTo(sx, trackY - 6);
+      ctx.lineTo(sx, trackY + 6);
+    }
+    ctx.stroke();
+  }
+}
+
+function renderCurves(ctx, W, dividerY, lod) {
+  if (lod < 2) return;
+  const trackY = Math.floor(dividerY * 0.52);
+
+  (DB.curves || []).forEach(c => {
+    const x1 = kmToScreenX(c.km_from);
+    const x2 = kmToScreenX(c.km_to);
+    if (x2 < 0 || x1 > W) return;
+
+    const isSharp = c.radius < 2500;
+    ctx.fillStyle = isSharp ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.2)';
+    ctx.strokeStyle = isSharp ? '#ef4444' : '#f59e0b';
+    ctx.lineWidth = 1.5;
+
+    const arcH = 13;
+    const arcY = trackY - 20;
+    ctx.fillRect(x1, arcY, x2 - x1, arcH);
+    ctx.strokeRect(x1, arcY, x2 - x1, arcH);
+
+    if (x2 - x1 > 35) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8.5px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`C${c.curve_no} (R${c.radius}m)`, (x1 + x2)/2, arcY + 9);
+    }
+  });
+}
+
+function renderLoopLines(ctx, W, dividerY, lod) {
+  if (lod < 2 || viewKmSpan > 15.0) return;
+  const trackY = Math.floor(dividerY * 0.52);
+
+  (DB.loop_lines || []).forEach(line => {
+    const chF = (line.ch_from !== undefined && line.ch_from !== null) ? line.ch_from : line.km_from;
+    const chT = (line.ch_to !== undefined && line.ch_to !== null) ? line.ch_to : line.km_to;
+    const x1 = kmToScreenX(chF);
+    const x2 = kmToScreenX(chT);
+    if (x2 < 0 || x1 > W) return;
+
+    const txt = (line.line || '').toUpperCase();
+    let offset = -22;
+    let color = '#38bdf8'; // Sky blue for Up loops
+    let labelColor = '#7dd3fc';
+
+    if (txt.includes('HOT AXLE')) {
+      offset = -36;
+      color = '#f87171'; // Red for Hot Axle Siding
+      labelColor = '#fca5a5';
+    } else if (txt.includes('MACHINE')) {
+      offset = -48;
+      color = '#fbbf24'; // Amber for Machine Siding
+      labelColor = '#fde68a';
+    } else if (txt.includes('TOWER')) {
+      offset = -48;
+      color = '#a78bfa'; // Purple for Tower Wagon
+      labelColor = '#ddd6fe';
+    } else if (txt.includes('BALLAST')) {
+      offset = 48;
+      color = '#a3e635'; // Lime for Ballast Siding
+      labelColor = '#d9f99d';
+    } else if (txt.includes('SHUNTING')) {
+      offset = 48;
+      color = '#38bdf8';
+      labelColor = '#7dd3fc';
+    } else if (txt.includes('CONNECTING') || txt.includes('TO IR')) {
+      offset = 64;
+      color = '#fb923c'; // Orange for IR Connector
+      labelColor = '#fdba74';
+    } else if (txt.includes('GOODS LINE NO 1')) {
+      offset = 38;
+      color = '#34d399';
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('GOODS LINE NO 2')) {
+      offset = 54;
+      color = '#34d399';
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('LINE NO 7') || txt.includes('LOOP LINE NO 7')) {
+      offset = -38;
+      color = '#38bdf8';
+      labelColor = '#7dd3fc';
+    } else if (txt.includes('LINE NO 6') || txt.includes('LOOP LINE NO 6')) {
+      offset = 64;
+      color = '#34d399';
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('LINE NO 5') || txt.includes('LINE 5') || txt.includes('5A')) {
+      offset = 54;
+      color = '#34d399';
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('LINE NO 4') || txt.includes('LINE 4') || txt.includes('4A')) {
+      offset = 38;
+      color = '#34d399'; // Emerald for Down Goods loops
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('LINE NO 3') || txt.includes('LINE 3') || txt.includes('3A')) {
+      offset = 22;
+      color = '#34d399'; // Down loop 3/3A
+      labelColor = '#a7f3d0';
+    } else if (txt.includes('LINE NO 2') || txt.includes('LINE 2')) {
+      offset = -22;
+      color = '#38bdf8';
+      labelColor = '#7dd3fc';
+    } else if (txt.includes('LINE NO 1') || txt.includes('LINE 1') || txt.includes('1A')) {
+      offset = -22;
+      color = '#38bdf8'; // Up loop 1/1A
+      labelColor = '#7dd3fc';
+    }
+
+    const lineY = trackY + offset;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+
+    ctx.beginPath();
+    const takeoffLen = Math.min(14, Math.max(4, Math.abs(offset) * 0.45));
+    ctx.moveTo(x1 - takeoffLen, trackY);
+    ctx.lineTo(x1, lineY);
+    ctx.lineTo(x2, lineY);
+    ctx.lineTo(x2 + takeoffLen, trackY);
+    ctx.stroke();
+
+    if (lod >= 2.5 && x2 - x1 > 45) {
+      ctx.fillStyle = labelColor;
+      ctx.font = 'bold 8px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      const shortName = line.line
+        .replace('Common Loop Line', 'Loop')
+        .replace('Over Run of Common Loop Line', 'Overrun')
+        .replace('Over Run OF Loop Line', 'Overrun')
+        .replace('Line Between Common Loop Line', 'X-Over')
+        .replace('Line between Loop Line', 'X-Over');
+      ctx.fillText(shortName, (x1 + x2) / 2, offset < 0 ? lineY - 4 : lineY + 11);
+    }
+  });
+}
+
+function renderBridges(ctx, W, dividerY, lod) {
+  if (lod < 2) return;
+  const trackY = Math.floor(dividerY * 0.52);
+
+  (DB.bridges || []).forEach(b => {
+    const x = kmToScreenX(b.km_from);
+    if (x < -20 || x > W + 20) return;
+
+    const isMajor = (b.bridge_type || '').includes('MJB') || (b.bridge_type || '').includes('ROB');
+    ctx.strokeStyle = isMajor ? '#f59e0b' : '#38bdf8';
+    ctx.lineWidth = isMajor ? 2.5 : 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(x - 3, trackY - 10);
+    ctx.lineTo(x + 3, trackY - 10);
+    ctx.moveTo(x, trackY - 10);
+    ctx.lineTo(x, trackY + 10);
+    ctx.moveTo(x - 3, trackY + 10);
+    ctx.lineTo(x + 3, trackY + 10);
+    ctx.stroke();
+
+    if (lod >= 3) {
+      ctx.fillStyle = isMajor ? '#f59e0b' : '#94a3b8';
+      ctx.font = '8px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Br ${b.bridge_no}`, x, trackY + 18);
+    }
+  });
+}
+
+function renderTurnouts(ctx, W, dividerY, lod) {
+  if (lod < 2) return;
+  const trackY = Math.floor(dividerY * 0.52);
+
+  (DB.points_and_crossings || []).forEach(p => {
+    const x = kmToScreenX(p.srj_chainage);
+    if (x < -20 || x > W + 20) return;
+
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, trackY);
+    ctx.lineTo(x + 9, trackY - 12);
+    ctx.stroke();
+
+    if (lod >= 3) {
+      ctx.fillStyle = '#10b981';
+      ctx.font = '8px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`P${p.point_no}`, x, trackY - 14);
+    }
+  });
+}
+
+function renderElevationGrid(ctx, W, topY, bottomY) {
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+
+  for (let elev = minElev; elev <= maxElev; elev += 10) {
+    const y = elevToScreenY(elev, topY, bottomY);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '8.5px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${elev}m`, W - 6, y - 2);
+  }
+}
+
+function renderLinkLinePlan(ctx, W, dividerY, lod) {
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+  ctx.fillRect(0, 0, W, dividerY);
+
+  renderChainageRuler(ctx, W, dividerY, lod);
+
+  const trackY = Math.floor(dividerY * 0.58);
+
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, trackY - 5, W, 10);
+
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, trackY);
+  ctx.lineTo(W, trackY);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, trackY - 2);
+  ctx.lineTo(W, trackY - 2);
+  ctx.moveTo(0, trackY + 2);
+  ctx.lineTo(W, trackY + 2);
+  ctx.stroke();
+
+  const smunX = kmToScreenX(1171.661);
+  const rpjX = kmToScreenX(1178.448);
+
+  if (smunX >= -80 && smunX <= W + 80) {
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(smunX, trackY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔗 SMUN Yard (1171.661)', smunX, trackY - 12);
+  }
+
+  if (rpjX >= -80 && rpjX <= W + 80) {
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(rpjX, trackY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔗 Rajpura IR (1178.448)', rpjX, trackY - 12);
+  }
+
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 10px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('SMUN - RPJ DEDICATED LINK LINE CORRIDOR', 10, 42);
+}
+
+function renderHighBanks(ctx, W, topY, bottomY, lod) {
+  if (lineMode === 'link' || lod < 2) return;
+  (DB.profile.high_banks || []).forEach(hb => {
+    const x = kmToScreenX(hb.km);
+    if (x < 0 || x > W) return;
+
+    const pflY = elevToScreenY(hb.pfl, topY, bottomY);
+    const glY = elevToScreenY(hb.gl, topY, bottomY);
+
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+    ctx.fillRect(x - 2, Math.min(pflY, glY), 4, Math.abs(glY - pflY));
+  });
+}
+
+function renderLongitudinalProfile(ctx, W, topY, bottomY) {
+  const isLink = lineMode === 'link';
+  const pts = isLink ? (DB.profile.link_line || []) : (DB.profile.points || []);
+  if (!pts.length) return;
+
+  const visPts = pts.filter(p => p.km >= viewKmStart - 0.2 && p.km <= viewKmStart + viewKmSpan + 0.2);
+  if (!visPts.length) return;
+
+  // Ground Level (GL)
+  ctx.strokeStyle = '#a16207';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  visPts.forEach((p, i) => {
+    const x = kmToScreenX(p.km);
+    const y = elevToScreenY(p.gl, topY, bottomY);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Formation / Rail Level (PFL)
+  ctx.strokeStyle = isLink ? '#f59e0b' : '#38bdf8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  visPts.forEach((p, i) => {
+    const x = kmToScreenX(p.km);
+    const y = elevToScreenY(p.pfl, topY, bottomY);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function renderGradients(ctx, W, gradBandY, lod) {
+  const isLink = lineMode === 'link';
+  const grads = isLink ? (DB.profile.link_gradients || []) : (DB.profile.gradients || []);
+  grads.forEach(g => {
+    const x1 = kmToScreenX(g.km_from);
+    const x2 = kmToScreenX(g.km_to);
+    if (x2 < 0 || x1 > W) return;
+
+    const dir = (g.direction || '').toUpperCase();
+    const lbl = (g.label || '').toUpperCase();
+    const isRising = dir.includes('RISE') || lbl.includes('RISE') || lbl.includes('RISING');
+    const isFalling = dir.includes('FALL') || lbl.includes('FALL') || lbl.includes('FALLING');
+
+    ctx.fillStyle = isRising ? 'rgba(16, 185, 129, 0.15)' : (isFalling ? 'rgba(239, 68, 68, 0.15)' : 'rgba(148, 163, 184, 0.1)');
+    ctx.strokeStyle = isRising ? '#10b981' : (isFalling ? '#ef4444' : '#64748b');
+    ctx.lineWidth = 1;
+
+    ctx.fillRect(x1, gradBandY, x2 - x1, 26);
+    ctx.strokeRect(x1, gradBandY, x2 - x1, 26);
+
+    if (x2 - x1 > 35) {
+      ctx.fillStyle = isRising ? '#34d399' : (isFalling ? '#f87171' : '#cbd5e1');
+      ctx.font = 'bold 8.5px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      const arrow = isRising ? '↗' : (isFalling ? '↘' : '→');
+      ctx.fillText(`${arrow} ${g.label}`, (x1 + x2)/2, gradBandY + 16);
+    }
+  });
+}
+
+function renderCrosshair(ctx, x, H, km) {
+  ctx.strokeStyle = lineMode === 'link' ? 'rgba(245, 158, 11, 0.85)' : 'rgba(56, 189, 248, 0.85)';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x, 0);
+  ctx.lineTo(x, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function updateHUD(km) {
+  currentKm = km;
+  const isLink = lineMode === 'link';
+  document.getElementById('hudKmText').textContent = `${isLink ? 'LINK ' : ''}KM ${km.toFixed(3)}`;
+
+  // Section
+  if (isLink) {
+    document.getElementById('hudSecText').textContent = 'SMUN-RPJ Link Line';
+  } else {
+    const sec = (DB.sections || []).find(s => s.km_from <= km && km <= s.km_to);
+    document.getElementById('hudSecText').textContent = sec ? sec.section : 'Main Line';
+  }
+
+  // Elevation & Bank
+  const pts = isLink ? (DB.profile.link_line || []) : (DB.profile.points || []);
+  let pfl = '--', gl = '--', bank = '--';
+  if (pts.length) {
+    let closest = pts[0];
+    let minD = 999;
+    for (let i = 0; i < pts.length; i++) {
+      const d = Math.abs(pts[i].km - km);
+      if (d < minD) { minD = d; closest = pts[i]; }
+      if (d < 0.02) break;
+    }
+    if (minD < 0.25) {
+      pfl = `${closest.pfl.toFixed(2)}m`;
+      gl = `${closest.gl.toFixed(2)}m`;
+      const diff = closest.pfl - closest.gl;
+      bank = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}m (${diff >= 0 ? 'Fill' : 'Cut'})`;
+    }
+  }
+  document.getElementById('hudPflVal').textContent = pfl;
+  document.getElementById('hudGlVal').textContent = gl;
+  document.getElementById('hudBankVal').textContent = bank;
+
+  // Gradient
+  const grads = isLink ? (DB.profile.link_gradients || []) : (DB.profile.gradients || []);
+  const grad = grads.find(g => g.km_from <= km && km <= g.km_to);
+  document.getElementById('hudGradText').textContent = grad ? `${grad.label} (${grad.length_m}m)` : 'LEVEL';
+
+  // Assets details
+  if (isLink) {
+    document.getElementById('hudAssetText').innerHTML = '<span>🔗 SMUN to Rajpura Link Line (Single BG Electric Line, DFCCIL)</span>';
+  } else {
+    const nearby = [];
+    (DB.bridges || []).forEach(b => {
+      if (Math.abs(b.km_from - km) <= 0.25) nearby.push(`🌉 Br ${b.bridge_no} (${b.bridge_type}) [${b.span_config || ''}]`);
+    });
+    (DB.curves || []).forEach(c => {
+      if (c.km_from <= km && km <= c.km_to) nearby.push(`🔄 Curve ${c.curve_no} (R${c.radius}m, ${c.degree}°)`);
+    });
+    (DB.points_and_crossings || []).forEach(p => {
+      if (Math.abs(p.srj_chainage - km) <= 0.18) nearby.push(`🔀 Point ${p.point_no} (${p.station})`);
+    });
+    document.getElementById('hudAssetText').innerHTML = nearby.length ? nearby.join(' &bull; ') : '<span>📍 Open Main Line Corridor</span>';
+  }
+
+  // Staff (Keyman)
+  const staff = DB.master_staff || [];
+  const kmStaff = staff.find(s => (s.designation || '').toUpperCase().includes('KEYMAN') && s.km_from <= km && km <= s.km_to);
+  const kmNameEl = document.getElementById('hudKeymanName');
+  const kmCallBtn = document.getElementById('keymanCallBtn');
+  if (kmStaff) {
+    kmNameEl.textContent = `${kmStaff.name} (${kmStaff.beat_no})`;
+    currentKeymanMobile = kmStaff.mobile || "";
+    kmCallBtn.style.display = kmStaff.mobile ? 'inline-flex' : 'none';
+  } else {
+    kmNameEl.textContent = 'Section Staff';
+    currentKeymanMobile = "";
+    kmCallBtn.style.display = 'none';
+  }
+
+  // Staff (Patrolman)
+  const pmStaff = staff.find(s => (s.designation || '').toLowerCase().includes('patrol') && s.km_from <= km && km <= s.km_to);
+  const pmNameEl = document.getElementById('hudPatrolmanName');
+  const pmCallBtn = document.getElementById('patrolmanCallBtn');
+  if (pmStaff) {
+    pmNameEl.textContent = `${pmStaff.name} (${pmStaff.beat_no})`;
+    currentPatrolmanMobile = pmStaff.mobile || "";
+    pmCallBtn.style.display = pmStaff.mobile ? 'inline-flex' : 'none';
+  } else {
+    pmNameEl.textContent = 'Section Patrol';
+    currentPatrolmanMobile = "";
+    pmCallBtn.style.display = 'none';
+  }
+
+  // Matching P&P Drawing
+  const matchedDwg = (DB.drawings || []).find(dw => {
+    const fn = (dw.filename || dw.name || '').toLowerCase();
+    const cat = (dw.category || dw.cat || '').toLowerCase();
+    return dw.km_from <= km && km <= dw.km_to && (cat.includes('profile') || fn.includes('profile') || fn.includes('dfcc'));
+  });
+  currentMatchedDrawing = matchedDwg;
+  const quickDwgBtn = document.getElementById('hudDwgQuickBtn');
+  if (matchedDwg) {
+    quickDwgBtn.style.display = 'inline-flex';
+    const title = matchedDwg.filename || matchedDwg.name || 'Drawing';
+    quickDwgBtn.textContent = `📥 Open ${title.substring(0, 22)}...`;
+  } else {
+    quickDwgBtn.style.display = 'none';
+  }
+
+  // Google Maps GPS Coordinates
+  const gpsEl = document.getElementById('hudGpsText');
+  const gpsCoords = getGoogleCoords(km);
+  if (gpsCoords) {
+    if (gpsEl) gpsEl.textContent = `📍 GPS: ${gpsCoords.lat.toFixed(5)}°N, ${gpsCoords.lon.toFixed(5)}°E (KM ${km.toFixed(3)})`;
+  } else {
+    if (gpsEl) gpsEl.textContent = `📍 GPS: KM ${km.toFixed(3)}`;
+  }
+}
+
+function getGoogleCoords(km) {
+  const coords = DB.km_coordinates || [];
+  if (!coords.length) return null;
+
+  const k1 = Math.floor(km);
+  const k2 = k1 + 1;
+  const p1 = coords.find(c => Math.abs(c.km - k1) < 0.05);
+  const p2 = coords.find(c => Math.abs(c.km - k2) < 0.05);
+
+  if (p1 && p2) {
+    const frac = km - k1;
+    const lat = p1.lat + (p2.lat - p1.lat) * frac;
+    const lon = p1.lon + (p2.lon - p1.lon) * frac;
+    return { lat, lon };
+  } else if (p1) {
+    return { lat: p1.lat, lon: p1.lon };
+  } else {
+    let closest = coords[0];
+    let minD = 9999;
+    for (const c of coords) {
+      const d = Math.abs(c.km - km);
+      if (d < minD) { minD = d; closest = c; }
+    }
+    return closest ? { lat: closest.lat, lon: closest.lon } : null;
+  }
+}
+
+function openGoogleMaps(e) {
+  if (e) e.preventDefault();
+  const coords = getGoogleCoords(currentKm);
+  if (coords) {
+    const url = `https://www.google.com/maps?q=${coords.lat.toFixed(5)},${coords.lon.toFixed(5)}`;
+    openDrawingDirect(url);
+  }
+}
+
+function renderMinimap() {
+  if (!minimapCtx || !minimapCanvas) return;
+  const w = minimapCanvas.width / dpr;
+  const h = minimapCanvas.height / dpr;
+
+  minimapCtx.clearRect(0, 0, w, h);
+  minimapCtx.fillStyle = '#080c16';
+  minimapCtx.fillRect(0, 0, w, h);
+
+  // Stations tick
+  [1169.5, 1188.5, 1202.0, 1213.2, 1229.0, 1237.5, 1249.7].forEach(sk => {
+    const sx = ((sk - minKm) / (maxKm - minKm)) * w;
+    minimapCtx.strokeStyle = '#38bdf8';
+    minimapCtx.lineWidth = 1;
+    minimapCtx.beginPath();
+    minimapCtx.moveTo(sx, 0);
+    minimapCtx.lineTo(sx, h);
+    minimapCtx.stroke();
+  });
+
+  if (minimapBox) {
+    const x1 = Math.max(0, ((viewKmStart - minKm) / (maxKm - minKm)) * w);
+    const x2 = Math.min(w, (((viewKmStart + viewKmSpan) - minKm) / (maxKm - minKm)) * w);
+    minimapBox.style.left = `${x1}px`;
+    minimapBox.style.width = `${Math.max(6, x2 - x1)}px`;
+  }
+}
+
+// Drawings Modal UI
+function openDrawingsModal() {
+  document.getElementById('dwgModal').classList.add('open');
+  filterModalDrawings();
+}
+
+function closeDrawingsModal() {
+  document.getElementById('dwgModal').classList.remove('open');
+}
+
+function filterModalDrawings() {
+  const q = (document.getElementById('modalDwgSearch').value || '').toLowerCase();
+  const list = DB.drawings || [];
+  const container = document.getElementById('dwgListContainer');
+  
+  const filtered = list.filter(dw => {
+    const fn = (dw.filename || dw.name || '').toLowerCase();
+    const sheet = (dw.sheet_no || dw.sheet || '').toLowerCase();
+    const cat = (dw.category || dw.cat || '').toLowerCase();
+    return !q || fn.includes(q) || sheet.includes(q) || cat.includes(q);
+  });
+  
+  container.innerHTML = filtered.map(dw => {
+    const fname = dw.filename || dw.name || 'Drawing';
+    const isEsp = (dw.category || '').includes('ESP');
+    const chInfo = (dw.km_from !== null && dw.km_from !== undefined) ? `KM ${dw.km_from} - ${dw.km_to}` : (isEsp ? `ESP Yard Plan` : `General`);
+    const sheetInfo = dw.sheet_no ? `| Sheet: ${dw.sheet_no}` : '';
+
+    return `
+      <div class="dwg-item">
+        <div style="flex:1;" onclick="selectDrawingFromModal('${fname}', ${dw.km_from || (isEsp ? 1169.5 : null)})">
+          <div class="dwg-item-name">${isEsp ? '📐' : '📄'} ${fname}</div>
+          <div class="dwg-item-sub">📍 Chainage: ${chInfo} ${sheetInfo} | 💾 ${dw.size_kb} KB</div>
+        </div>
+        <div style="display:flex; gap:0.3rem;">
+          ${dw.km_from ? `<button class="tool-btn" onclick="selectDrawingFromModal('${fname}', ${dw.km_from})">Jump</button>` : ''}
+          ${isEsp ? `<button class="tool-btn" style="background:#0284c7; color:#fff;" onclick="openStationEspFromDrawing('${fname}')">📐 CAD</button>` : ''}
+          <button class="tool-btn gold" onclick="openDrawingDirect('${dw.url || fname}')">📥 Open</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectDrawingFromModal(name, km) {
+  closeDrawingsModal();
+  if (km) flyToKm(km);
+}
+
+function updateCurrentStation(km) {
+  const k = (km !== undefined) ? km : currentKm;
+  const stations = [
+    { code: 'SMUN', km: 1169.5 },
+    { code: 'SBJN', km: 1188.5 },
+    { code: 'NSIR', km: 1202.0 },
+    { code: 'GVGN', km: 1213.2 },
+    { code: 'KNNN', km: 1229.0 },
+    { code: 'CHAN', km: 1237.5 },
+    { code: 'SNL',  km: 1249.7 }
+  ];
+  let nearest = stations[0];
+  let minDist = 9999;
+  stations.forEach(s => {
+    const dist = Math.abs(k - s.km);
+    if (dist < minDist) { minDist = dist; nearest = s; }
+  });
+  currentStationCode = nearest.code;
+}
+
+const stnNames = {
+  'SMUN': 'New Shambhu (SMUN)',
+  'SBJN': 'New Sarai Banjara (SBJN)',
+  'NSIR': 'New Sirhind (NSIR)',
+  'GVGN': 'New Mandi Gobindgarh (GVGN)',
+  'KNNN': 'New Khanna (KNNN)',
+  'CHAN': 'New Chawa Pail (CHAN)',
+  'SNL': 'Sanehwal (SNL)'
+};
+
+function openStationEspFromDrawing(fname) {
+  const f = fname.toUpperCase();
+  let code = 'SMUN';
+  if (f.includes('SHAMBHU') || f.includes('SMUN')) code = 'SMUN';
+  else if (f.includes('SARAI') || f.includes('SBJN')) code = 'SBJN';
+  else if (f.includes('SIRHIND') || f.includes('NSIR')) code = 'NSIR';
+  else if (f.includes('GOBINDGARH') || f.includes('GVGN')) code = 'GVGN';
+  else if (f.includes('KHANNA') || f.includes('KNNN')) code = 'KNNN';
+  else if (f.includes('CHAWA') || f.includes('CHAN')) code = 'CHAN';
+  else if (f.includes('SANEHWAL') || f.includes('SNL')) code = 'SNL';
+  closeDrawingsModal();
+  openStationEsp(code);
+}
+
+const keyplanStations = {
+  'SMUN': {
+    code: 'SMUN',
+    name: 'New Shambhu (SMUN)',
+    type: 'Junction Station',
+    dfcKm: '1170.435',
+    irKm: '281.027',
+    lines: 'UP Main, DN Main, Loop Line 1, 2, 3, 4 (CAL 750M), IR Chord Connection',
+    points: 'Point Nos. 201A to 297',
+    file: 'SMUN_keyplan.png'
+  },
+  'SBJN': {
+    code: 'SBJN',
+    name: 'New Sarai Banjara (SBJN)',
+    type: 'Junction Station',
+    dfcKm: '1188.575',
+    irKm: '-',
+    lines: 'UP Main, DN Main, Loop Lines 1, 2, 3, IR Connecting Track',
+    points: 'Point Nos. 201A to 289B',
+    file: 'SBJN_keyplan.png'
+  },
+  'NSIR': {
+    code: 'NSIR',
+    name: 'New Sirhind (NSIR)',
+    type: 'Junction Station',
+    dfcKm: '1202.015',
+    irKm: '-',
+    lines: 'UP Main, DN Main, Multi-track Yard, Northern Railway Sirhind Chord',
+    points: 'Point Nos. 201 to 299',
+    file: 'NSIR_keyplan.png'
+  },
+  'GVGN': {
+    code: 'GVGN',
+    name: 'New Mandi Gobindgarh (GVGN)',
+    type: 'Crossing Station',
+    dfcKm: '1213.186',
+    irKm: '-',
+    lines: 'UP Main, DN Main, UP Loop (750M CAL), DN Loop (750M CAL), Sand Humps, Crossover',
+    points: 'Point Nos. 201 to 230',
+    file: 'GVGN_keyplan.png'
+  },
+  'KNNN': {
+    code: 'KNNN',
+    name: 'New Khanna (KNNN)',
+    type: 'Crossing Station',
+    dfcKm: '1229.086',
+    irKm: '-',
+    lines: 'UP Main, DN Main, UP Loop (750M CAL), DN Loop (750M CAL), Overruns',
+    points: 'Point Nos. 201 to 232',
+    file: 'KNNN_keyplan.png'
+  },
+  'CHAN': {
+    code: 'CHAN',
+    name: 'New Chawa Pail (CHAN)',
+    type: 'Junction Station',
+    dfcKm: '1237.576',
+    irKm: '-',
+    lines: 'UP Main, DN Main, Loop Lines 1-3 (750M CAL), Overrun Tracks, Goomty A & B',
+    points: 'Point Nos. 201A to 260B',
+    file: 'CHAN_keyplan.png'
+  }
+};
+const keyplanCache = {};
+let currentKeyplanImg = null;
+
+function getKeyplanAssetUrl(filename) {
+  return (window.location.protocol === 'file:') ? `keyplans/${filename}` : `/static/keyplans/${filename}`;
+}
+
+function openStationEsp(stationCode) {
+  if (stationCode === 'SNL') stationCode = 'CHAN';
+  const stnInfo = keyplanStations[stationCode] || keyplanStations['SMUN'];
+  const actualCode = stnInfo.code;
+  currentStationCode = actualCode;
+
+  const drawings = DB.drawings || [];
+  const esp = drawings.find(d => 
+    d.category && d.category.includes('ESP') && 
+    ((d.station && d.station === actualCode) || (d.filename && d.filename.toUpperCase().includes(actualCode)))
+  );
+  currentEspDrawing = esp;
+
+  const modalTitle = document.getElementById('espModalTitle');
+  const modalBody = document.getElementById('espModalBody');
+  const downloadBtn = document.getElementById('espDownloadBtn');
+  const modal = document.getElementById('espModal');
+
+  modalTitle.innerHTML = `⚡ <b>Official X-Ray Keyplan</b>: ${stnInfo.name} <span style="font-size:0.75rem; color:#38bdf8; font-weight:normal; margin-left:6px;">[SIP]</span>`;
+
+  const keyplanUrl = getKeyplanAssetUrl(stnInfo.file);
+  downloadBtn.style.display = 'inline-flex';
+  downloadBtn.innerHTML = `📥 Download HD Plan`;
+  downloadBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = keyplanUrl;
+    a.download = `${actualCode}_Official_X-Ray_Keyplan.png`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const stationTabsHtml = Object.keys(keyplanStations).map(code => `
+    <button class="cad-btn ${code === actualCode ? 'active' : ''}" style="${code === actualCode ? 'background:#0284c7; color:#fff; border-color:#38bdf8; font-weight:800;' : ''}" onclick="openStationEsp('${code}')">
+      ⚡ ${code}
+    </button>
+  `).join('');
+
+  const encodedUrl = esp ? encodeURIComponent(`http://10.128.241.18:8080${esp.url}`) : '';
+  const shareCadUrl = esp ? `https://sharecad.org/cadframe/load?url=${encodedUrl}` : '';
+
+  modalBody.innerHTML = `
+    <div class="cad-viewer-container">
+      <!-- Station switcher bar -->
+      <div class="cad-toolbar" style="background:#090f1d; border-bottom:1px solid #1e293b; padding:0.25rem 0.6rem; gap:0.3rem; justify-content:flex-start;">
+        <span style="font-size:0.68rem; color:#94a3b8; font-weight:800; text-transform:uppercase;">STATIONS:</span>
+        ${stationTabsHtml}
+      </div>
+
+      <!-- Mode & Tool Toolbar -->
+      <div class="cad-toolbar" style="padding:0.35rem 0.6rem;">
+        <div class="cad-toolbar-group">
+          <button class="cad-btn active" id="btnCadModeKeyplan" onclick="setCadViewMode('keyplan', '${actualCode}')">⚡ Official X-Ray Plan (HD)</button>
+          ${esp ? `<button class="cad-btn" id="btnCadModeWeb" onclick="setCadViewMode('web', '${actualCode}', '${shareCadUrl}')">🌐 Cloud CAD</button>` : ''}
+          <button class="cad-btn" id="btnCadModeFile" onclick="setCadViewMode('info', '${actualCode}')">ℹ️ Info</button>
+        </div>
+        <div class="cad-toolbar-group" id="cadZoomControls">
+          <span id="cadZoomPctBadge" style="font-size:0.7rem; font-family:monospace; background:#0f172a; border:1px solid #334155; padding:0.2rem 0.45rem; border-radius:4px; color:#38bdf8;">100%</span>
+          <button class="cad-btn" onclick="zoomCadCanvas(1.35)" title="Zoom In">🔍+</button>
+          <button class="cad-btn" onclick="zoomCadCanvas(0.74)" title="Zoom Out">🔍-</button>
+          <button class="cad-btn" onclick="resetCadCanvas('${actualCode}')" title="Fit Yard to Screen">↔ Fit</button>
+          <button class="cad-btn" onclick="setCadZoomNative('${actualCode}')" title="1:1 Native Scale">1:1 Native</button>
+          <a href="${keyplanUrl}" target="_blank" class="cad-btn" style="color:#38bdf8;" title="Open in Full Tab">↗️ Full</a>
+        </div>
+      </div>
+
+      <!-- Viewports Container -->
+      <div style="flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column;">
+        <!-- 1. High-Res Interactive Canvas -->
+        <div id="cadInteractiveContainer" style="flex:1; width:100%; height:100%; position:relative; background:#060a12; overflow:hidden;">
+          <canvas id="cadCanvas" style="display:block; width:100%; height:100%; cursor:grab;"></canvas>
+          <div style="position:absolute; top:8px; left:8px; pointer-events:none; background:rgba(15,23,42,0.9); border:1px solid #334155; padding:0.35rem 0.65rem; border-radius:5px; font-size:0.72rem; color:#cbd5e1; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+            <div style="font-weight:800; color:#38bdf8;">⚡ ${stnInfo.name} Official Signaling Keyplan</div>
+            <div style="font-size:0.68rem; color:#94a3b8; margin-top:2px;">DFC Km: <b style="color:#fff;">${stnInfo.dfcKm}</b> ${stnInfo.irKm !== '-' ? `| IR Km: <b style="color:#fff;">${stnInfo.irKm}</b>` : ''} | Drag to Pan • Wheel/Pinch to Zoom</div>
+          </div>
+        </div>
+
+        <!-- 2. Web Iframe CAD Viewer -->
+        <div id="cadWebContainer" style="display:none; flex:1; width:100%; height:100%; flex-direction:column; background:#111;">
+          <iframe id="cadIframe" src="" style="width:100%; height:100%; border:none; background:#1e293b;"></iframe>
+          <div style="padding:0.35rem 0.6rem; background:#0f172a; border-top:1px solid #334155; font-size:0.7rem; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
+            <span>Requires internet connection to load ShareCAD cloud frame.</span>
+            ${esp ? `<button class="cad-btn" onclick="downloadCurrentEsp()" style="color:#38bdf8;">Download File</button>` : ''}
+          </div>
+        </div>
+
+        <!-- 3. File Info View -->
+        <div id="cadInfoContainer" style="display:none; padding:0.8rem; overflow-y:auto; background:#070b14;">
+          <div style="background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:0.8rem; display:flex; flex-direction:column; gap:0.5rem; font-size:0.78rem;">
+            <h4 style="color:#38bdf8; margin:0;">⚡ ${stnInfo.name} Signaling Interlocking Plan (SIP)</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem; font-size:0.78rem;">
+              <div style="background:#090d16; padding:0.5rem; border-radius:5px; border:1px solid #1e293b;">
+                <span style="color:#94a3b8;">Station Type:</span><br><b>${stnInfo.type}</b>
+              </div>
+              <div style="background:#090d16; padding:0.5rem; border-radius:5px; border:1px solid #1e293b;">
+                <span style="color:#94a3b8;">DFC Chainage:</span><br><b style="color:#38bdf8;">Km ${stnInfo.dfcKm}</b>
+              </div>
+              ${stnInfo.irKm !== '-' ? `
+              <div style="background:#090d16; padding:0.5rem; border-radius:5px; border:1px solid #1e293b;">
+                <span style="color:#94a3b8;">IR Chainage:</span><br><b style="color:#10b981;">Km ${stnInfo.irKm}</b>
+              </div>` : ''}
+              <div style="background:#090d16; padding:0.5rem; border-radius:5px; border:1px solid #1e293b;">
+                <span style="color:#94a3b8;">Points & Crossings:</span><br><b>${stnInfo.points}</b>
+              </div>
+            </div>
+            <div style="background:#090d16; padding:0.5rem; border-radius:5px; border:1px solid #1e293b;">
+              <span style="color:#94a3b8;">Yard Tracks:</span><br>
+              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">${stnInfo.lines}</div>
+            </div>
+            ${esp ? `
+            <div style="background:#090d16; border:1px solid #1e293b; border-radius:5px; padding:0.5rem;">
+              <b style="color:#38bdf8;">📐 Related DWG:</b> <code>${esp.filename}</code> (${esp.size_kb} KB)<br>
+              <button class="cad-btn" onclick="downloadCurrentEsp()" style="margin-top:6px; color:#38bdf8;">📥 Download .DWG</button>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Status Strip -->
+      <div class="cad-meta-strip" style="background:#090f1d; border-top:1px solid #1e293b; padding:0.25rem 0.6rem; display:flex; justify-content:space-between; align-items:center; font-size:0.68rem; color:#94a3b8;">
+        <span>⚡ <b>${stnInfo.name}</b> | DFC Km: ${stnInfo.dfcKm} | Points: ${stnInfo.points}</span>
+        <span>Tip: Drag to Pan • Wheel / Pinch to Zoom</span>
+      </div>
+    </div>
+  `;
+
+  if (modal) modal.classList.add('open');
+  setTimeout(() => initCadCanvas(actualCode), 50);
+}
+
+function setCadViewMode(mode, stationCode, iframeUrl) {
+  const interBox = document.getElementById('cadInteractiveContainer');
+  const webBox = document.getElementById('cadWebContainer');
+  const infoBox = document.getElementById('cadInfoContainer');
+  const zoomGroup = document.getElementById('cadZoomControls');
+
+  const btnKeyplan = document.getElementById('btnCadModeKeyplan');
+  const btnWeb = document.getElementById('btnCadModeWeb');
+  const btnInfo = document.getElementById('btnCadModeFile');
+
+  if (btnKeyplan) btnKeyplan.classList.toggle('active', mode === 'keyplan');
+  if (btnWeb) btnWeb.classList.toggle('active', mode === 'web');
+  if (btnInfo) btnInfo.classList.toggle('active', mode === 'info');
+
+  if (zoomGroup) zoomGroup.style.display = mode === 'keyplan' ? 'flex' : 'none';
+
+  if (mode === 'keyplan') {
+    if (interBox) interBox.style.display = 'block';
+    if (webBox) webBox.style.display = 'none';
+    if (infoBox) infoBox.style.display = 'none';
+    renderCadCanvas();
+  } else if (mode === 'web') {
+    if (interBox) interBox.style.display = 'none';
+    if (webBox) webBox.style.display = 'flex';
+    if (infoBox) infoBox.style.display = 'none';
+    const ifr = document.getElementById('cadIframe');
+    if (ifr && (!ifr.src || ifr.src === 'about:blank' || ifr.src.endsWith('/'))) {
+      ifr.src = iframeUrl;
+    }
+  } else if (mode === 'info') {
+    if (interBox) interBox.style.display = 'none';
+    if (webBox) webBox.style.display = 'none';
+    if (infoBox) infoBox.style.display = 'block';
+  }
+}
+
+function downloadCurrentEsp() {
+  if (currentEspDrawing) {
+    openDrawingDirect(currentEspDrawing.url || currentEspDrawing.filename);
+  }
+}
+
+function closeEspModal() {
+  const modal = document.getElementById('espModal');
+  if (modal) modal.classList.remove('open');
+  const ifr = document.getElementById('cadIframe');
+  if (ifr) ifr.src = '';
+}
+
+function initCadCanvas(stationCode) {
+  const canvas = document.getElementById('cadCanvas');
+  if (!canvas) return;
+  cadCanvas = canvas;
+  cadCtx = canvas.getContext('2d');
+  cadStation = stationCode;
+
+  cadTransform = {
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    isDragging: false,
+    startX: 0,
+    startY: 0
+  };
+
+  const rect = canvas.getBoundingClientRect();
+  const dprVal = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(rect.width * dprVal);
+  canvas.height = Math.floor(rect.height * dprVal);
+  cadCtx.scale(dprVal, dprVal);
+  cadW = rect.width;
+  cadH = rect.height;
+
+  // Load Keyplan image
+  const stnInfo = keyplanStations[stationCode] || keyplanStations['SMUN'];
+  const keyplanSrc = getKeyplanAssetUrl(stnInfo.file);
+
+  if (keyplanCache[stationCode] && keyplanCache[stationCode].complete) {
+    currentKeyplanImg = keyplanCache[stationCode];
+    resetCadCanvas(stationCode);
+  } else {
+    const img = new Image();
+    img.src = keyplanSrc;
+    img.onload = () => {
+      keyplanCache[stationCode] = img;
+      currentKeyplanImg = img;
+      resetCadCanvas(stationCode);
+    };
+    img.onerror = () => {
+      console.error('Failed to load keyplan:', keyplanSrc);
+      currentKeyplanImg = null;
+      renderCadCanvas();
+    };
+  }
+
+  canvas.onmousedown = (e) => {
+    cadTransform.isDragging = true;
+    cadTransform.startX = e.clientX - cadTransform.offsetX;
+    cadTransform.startY = e.clientY - cadTransform.offsetY;
+    canvas.style.cursor = 'grabbing';
+  };
+
+  window.onmousemove = (e) => {
+    if (cadTransform && cadTransform.isDragging) {
+      cadTransform.offsetX = e.clientX - cadTransform.startX;
+      cadTransform.offsetY = e.clientY - cadTransform.startY;
+      renderCadCanvas();
+    }
+  };
+
+  window.onmouseup = () => {
+    if (cadTransform && cadTransform.isDragging) {
+      cadTransform.isDragging = false;
+      canvas.style.cursor = 'grab';
+    }
+  };
+
+  canvas.onwheel = (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.25 : 0.8;
+    zoomCadCanvas(factor, e.clientX, e.clientY);
+  };
+
+  let cadTouchDist = 0;
+  let cadTouchScale = 1;
+  let cadTouchMidX = 0, cadTouchMidY = 0;
+
+  canvas.ontouchstart = (e) => {
+    if (e.touches.length === 1) {
+      cadTransform.isDragging = true;
+      cadTransform.startX = e.touches[0].clientX - cadTransform.offsetX;
+      cadTransform.startY = e.touches[0].clientY - cadTransform.offsetY;
+    } else if (e.touches.length === 2) {
+      cadTransform.isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      cadTouchDist = Math.hypot(dx, dy);
+      cadTouchScale = cadTransform.scale;
+      cadTouchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      cadTouchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    }
+  };
+
+  canvas.ontouchmove = (e) => {
+    if (e.cancelable) e.preventDefault();
+    if (e.touches.length === 1 && cadTransform.isDragging) {
+      cadTransform.offsetX = e.touches[0].clientX - cadTransform.startX;
+      cadTransform.offsetY = e.touches[0].clientY - cadTransform.startY;
+      renderCadCanvas();
+    } else if (e.touches.length === 2 && cadTouchDist > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const factor = dist / cadTouchDist;
+      const rect = canvas.getBoundingClientRect();
+      const midX = cadTouchMidX - rect.left;
+      const midY = cadTouchMidY - rect.top;
+
+      const newScale = Math.max(0.04, Math.min(8.0, cadTouchScale * factor));
+      const scaleChange = newScale / cadTransform.scale;
+      cadTransform.offsetX = midX - (midX - cadTransform.offsetX) * scaleChange;
+      cadTransform.offsetY = midY - (midY - cadTransform.offsetY) * scaleChange;
+      cadTransform.scale = newScale;
+      renderCadCanvas();
+    }
+  };
+
+  canvas.ontouchend = () => {
+    if (cadTransform) cadTransform.isDragging = false;
+  };
+
+  renderCadCanvas();
+}
+
+function zoomCadCanvas(factor, clientX, clientY) {
+  if (!cadTransform || !cadCanvas) return;
+  const rect = cadCanvas.getBoundingClientRect();
+  const cx = (clientX !== undefined) ? (clientX - rect.left) : (cadW / 2);
+  const cy = (clientY !== undefined) ? (clientY - rect.top) : (cadH / 2);
+  cadTransform.offsetX = cx - (cx - cadTransform.offsetX) * factor;
+  cadTransform.offsetY = cy - (cy - cadTransform.offsetY) * factor;
+  cadTransform.scale = Math.max(0.04, Math.min(8.0, cadTransform.scale * factor));
+  renderCadCanvas();
+}
+
+function setCadZoomNative(stationCode) {
+  if (!cadTransform || !currentKeyplanImg) return;
+  cadTransform.scale = 1.0;
+  cadTransform.offsetX = (cadW - currentKeyplanImg.naturalWidth) / 2;
+  cadTransform.offsetY = (cadH - currentKeyplanImg.naturalHeight) / 2;
+  renderCadCanvas();
+}
+
+function resetCadCanvas(stationCode) {
+  if (!cadCanvas || !cadTransform) return;
+  if (currentKeyplanImg && currentKeyplanImg.complete) {
+    const imgW = currentKeyplanImg.naturalWidth || 3573;
+    const imgH = currentKeyplanImg.naturalHeight || 2526;
+    const fitScale = Math.min((cadW - 24) / imgW, (cadH - 24) / imgH);
+    cadTransform.scale = fitScale;
+    cadTransform.offsetX = (cadW - imgW * fitScale) / 2;
+    cadTransform.offsetY = (cadH - imgH * fitScale) / 2;
+  } else {
+    cadTransform.scale = 0.3;
+    cadTransform.offsetX = 20;
+    cadTransform.offsetY = 20;
+  }
+  renderCadCanvas();
+}
+
+function renderCadCanvas() {
+  if (!cadCtx || !cadCanvas) return;
+  const ctx = cadCtx;
+  const W = cadW;
+  const H = cadH;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dprVal = window.devicePixelRatio || 1;
+  ctx.scale(dprVal, dprVal);
+  ctx.clearRect(0, 0, W, H);
+
+  // Deep Blueprint Dark background
+  ctx.fillStyle = '#060a12';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!currentKeyplanImg || !currentKeyplanImg.complete) {
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⏳ Loading High-Definition X-Ray Keyplan...', W / 2, H / 2);
+    ctx.restore();
+    return;
+  }
+
+  // Apply pan & zoom
+  ctx.translate(cadTransform.offsetX, cadTransform.offsetY);
+  ctx.scale(cadTransform.scale, cadTransform.scale);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(currentKeyplanImg, 0, 0);
+
+  ctx.restore();
+
+  // Update zoom badge
+  const zoomPctEl = document.getElementById('cadZoomPctBadge');
+  if (zoomPctEl && cadTransform) {
+    zoomPctEl.textContent = `${Math.round(cadTransform.scale * 100)}%`;
+  }
+}
+
+// Gestures & Interactions
+function setupInteractions() {
+  const vp = document.getElementById('viewport');
+
+  vp.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartKm = viewKmStart;
+    vp.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+
+    if (isDragging) {
+      const dx = e.clientX - dragStartX;
+      const dKm = -(dx / width) * viewKmSpan;
+      viewKmStart = Math.max(minKm - 2, Math.min(maxKm - viewKmSpan + 2, dragStartKm + dKm));
+    }
+    requestRender();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      vp.style.cursor = 'grab';
+      requestRender();
+    }
+  });
+
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cursorKm = screenXToKm(e.clientX - rect.left);
+    const factor = e.deltaY < 0 ? 0.75 : 1.35;
+    zoomAtKm(cursorKm, factor);
+  }, { passive: false });
+
+  let touchStartTime = 0;
+  let touchStartPos = { x: 0, y: 0 };
+
+  // Mobile Touch Gestures: Strict 1-finger PAN ONLY, 2-finger PINCH ZOOM ONLY
+  vp.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartTime = Date.now();
+      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      isDragging = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartKm = viewKmStart;
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.touches[0].clientX - rect.left;
+      currentKm = screenXToKm(mouseX);
+      requestRender();
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialTouchDist = Math.hypot(dx, dy);
+      initialTouchSpan = viewKmSpan;
+    }
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      // Pure Pan, strictly NO zoom
+      const dx = e.touches[0].clientX - dragStartX;
+      const dKm = -(dx / width) * viewKmSpan;
+      viewKmStart = Math.max(minKm - 1.5, Math.min(maxKm - viewKmSpan + 1.5, dragStartKm + dKm));
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.touches[0].clientX - rect.left;
+      currentKm = screenXToKm(mouseX);
+      requestRender();
+    } else if (e.touches.length === 2) {
+      // Strict 2-finger pinch zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (initialTouchDist > 0 && dist > 10) {
+        const factor = initialTouchDist / dist;
+        const newSpan = Math.max(0.12, Math.min(maxKm - minKm, initialTouchSpan * factor));
+        const midScreenX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const rect = canvas.getBoundingClientRect();
+        const midX = midScreenX - rect.left;
+        const centerKm = screenXToKm(midX);
+        const ratio = (centerKm - viewKmStart) / viewKmSpan;
+        viewKmSpan = newSpan;
+        viewKmStart = centerKm - ratio * newSpan;
+        requestRender();
+      }
+    }
+  }, { passive: true });
+
+  vp.addEventListener('touchend', (e) => {
+    if (e.changedTouches && e.changedTouches.length === 1) {
+      const elapsed = Date.now() - touchStartTime;
+      const dx = Math.abs(e.changedTouches[0].clientX - touchStartPos.x);
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartPos.y);
+      if (elapsed < 350 && dx < 12 && dy < 12) {
+        // Quick tap: check if tapped on station tag
+        const rect = canvas.getBoundingClientRect();
+        const tapX = e.changedTouches[0].clientX - rect.left;
+        const tapY = e.changedTouches[0].clientY - rect.top;
+        if (tapY <= 32) {
+          const stations = [
+            { code: 'SMUN', km: 1169.5 },
+            { code: 'SBJN', km: 1188.5 },
+            { code: 'NSIR', km: 1202.0 },
+            { code: 'GVGN', km: 1213.2 },
+            { code: 'KNNN', km: 1229.0 },
+            { code: 'CHAN', km: 1237.5 },
+            { code: 'SNL',  km: 1249.7 }
+          ];
+          stations.forEach(st => {
+            const stX = kmToScreenX(st.km);
+            if (Math.abs(tapX - stX) <= 30) {
+              openStationEsp(st.code);
+            }
+          });
+        }
+      }
+    }
+
+    if (e.touches.length === 0) {
+      isDragging = false;
+      initialTouchDist = 0;
+    } else if (e.touches.length === 1) {
+      isDragging = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartKm = viewKmStart;
+      initialTouchDist = 0;
+    }
+  }, { passive: true });
+
+  // Minimap Scrubber Touch
+  const mmBar = document.getElementById('minimapBar');
+  const handleMinimap = (e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const rect = mmBar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetKm = minKm + ratio * (maxKm - minKm);
+    viewKmStart = Math.max(minKm, Math.min(maxKm - viewKmSpan, targetKm - viewKmSpan / 2));
+    flyToKm(targetKm);
+  };
+  mmBar.addEventListener('mousedown', handleMinimap);
+  mmBar.addEventListener('touchstart', handleMinimap, { passive: true });
+}
+
+function initApp() {
+  canvas = document.getElementById('trackCanvas');
+  ctx = canvas.getContext('2d');
+  minimapCanvas = document.getElementById('minimapCanvas');
+  minimapCtx = minimapCanvas.getContext('2d');
+  minimapBox = document.getElementById('minimapBox');
+
+  document.getElementById('dwgTotalCount').textContent = (DB.drawings || []).length;
+
+  setupInteractions();
+  window.addEventListener('resize', () => {
+    resize();
+    requestRender();
+  });
+  resize();
+
+  flyToKm(1169.5);
+}
+
+function toggleBrowserFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+}
+
+window.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
