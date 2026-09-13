@@ -1468,6 +1468,72 @@
       color: #38bdf8;
     }
 
+    /* Bottom-Center Floating Satellite Switcher */
+    .bottom-center-satellite-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 2px solid #0284c7;
+      color: #f8fafc;
+      padding: 9px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(12px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .bottom-center-satellite-btn:hover {
+      transform: translateX(-50%) translateY(-2px);
+      background: #0f172a;
+      border-color: #38bdf8;
+      box-shadow: 0 8px 28px rgba(2, 132, 199, 0.6);
+      color: #38bdf8;
+    }
+    .bottom-center-satellite-btn.active-satellite {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 6px 24px rgba(2, 132, 199, 0.7);
+    }
+
+    /* Distance Measurement Calculator Tabs */
+    .dist-tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .dist-tab-btn:hover {
+      color: #f1f5f9;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .dist-tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
     /* Point & Crossing Map Marker Badge */
     .pt-crossing-map-badge {
       background: rgba(15, 23, 42, 0.94);
@@ -1579,25 +1645,27 @@
 
     <!-- View Modes & Actions -->
     <div class="toolbar-group">
+      <button class="btn-tool" id="btnToggleSidebar" onclick="toggleSidebar()" title="Toggle KM Inspector Sidebar" style="background:#1e293b; border-color:#38bdf8; color:#38bdf8;">📋 Inspector</button>
+      <button class="btn-tool" id="btnDistanceCalculator" onclick="openDistanceCalcModal()" title="Distance Measurement Calculator (Pole-to-Pole & Asset-to-Asset)">📐 Distance</button>
       <button class="btn-tool" id="btnSingleViewToggle" onclick="toggleGpsDiagramView()" title="Switch between Map & Diagram">📏 Diagram</button>
       <a href="/" class="btn-tool" style="background:#334155; color:#fff;">🏠 Portal</a>
 
-      <!-- 3-Dots More Options Dropdown (Keyplans, P&P Drawings, Camera APK, Inspector) -->
+      <!-- 3-Dots More Options Dropdown (Keyplans, P&P Drawings, Camera APK, Distance Calculator) -->
       <div class="toolbar-dropdown-wrap" style="position:relative; display:inline-block;">
         <button class="btn-tool" id="btnThreeDotsMenu" onclick="toggleThreeDotsMenu(event)" title="More Tools & Drawings" style="padding:2px 10px; font-size:1.15rem; line-height:1; font-weight:800; cursor:pointer;">⋮</button>
-        <div class="three-dots-dropdown-menu" id="threeDotsDropdown" style="display:none; position:fixed; background:#0b1120; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.85); min-width:215px; z-index:999999; padding:6px 0;">
+        <div class="three-dots-dropdown-menu" id="threeDotsDropdown" style="display:none; position:fixed; background:#0b1120; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.85); min-width:220px; z-index:999999; padding:6px 0;">
           <button class="three-dots-item-btn" onclick="openStationEsp(currentStationCode || 'SMUN'); closeThreeDotsMenu();">
             <span>⚡</span> <span>Keyplans (HD)</span>
           </button>
           <button class="three-dots-item-btn" onclick="openDrawingsModal(); closeThreeDotsMenu();">
             <span>📜</span> <span>P&P Drawings (249)</span>
           </button>
+          <button class="three-dots-item-btn" onclick="openDistanceCalcModal(); closeThreeDotsMenu();">
+            <span>📐</span> <span>Distance Calculator</span>
+          </button>
           <a href="/download/camera-apk" download="DFCGPSMapCamera.apk" onclick="closeThreeDotsMenu();" class="three-dots-item-btn" style="text-decoration:none;">
             <span>📷</span> <span>GPS Camera APK</span>
           </a>
-          <button class="three-dots-item-btn" id="btnToggleSidebar" onclick="toggleSidebar(); closeThreeDotsMenu();">
-            <span>📋</span> <span>KM Inspector</span>
-          </button>
         </div>
       </div>
     </div>
@@ -1612,7 +1680,7 @@
         <!-- High-Precision GIS Satellite Track Layer with KM Milestones & Stations -->
         <div id="mapView" style="width: 100%; height: 100%; display: block;"></div>
 
-        <!-- Floating Mobile/Desktop Action Controls (GPS⇄Diagram Switcher, Camera, Satellite Layer, Tap to Live Location) -->
+        <!-- Floating Mobile/Desktop Action Controls (GPS⇄Diagram Switcher, Camera, Tap to Live Location) -->
         <div class="floating-map-actions-stack">
           <!-- 1. Day/Night Style GPS ⇄ Diagram View Switcher -->
           <button id="btnFloatingViewToggle" class="floating-action-btn view-toggle-btn" onclick="toggleGpsDiagramView()" title="Switch between GPS Map & Linear Diagram">
@@ -1626,18 +1694,18 @@
             <span class="toggle-label">Camera</span>
           </button>
 
-          <!-- 3. Satellite ⇄ Normal Layer Switcher Button -->
-          <button id="btnToggleMapLayer" class="floating-action-btn layer-toggle-btn" onclick="toggleSatelliteLayer()" title="Switch Satellite / Normal Map">
-            <span id="layerToggleIcon" class="btn-icon">🛰️</span>
-            <span id="layerToggleLabel" class="toggle-label">Satellite</span>
-          </button>
-
-          <!-- 4. Tap to Live Location Button (Google Maps Style) -->
+          <!-- 3. Tap to Live Location Button (Google Maps Style) -->
           <button id="btnFloatingMyLocation" class="floating-action-btn my-location-btn" onclick="onTapMyLocation()" title="Your Live GPS Location (Google Maps Style)">
             <span id="floatingLocationIcon" class="btn-icon">🎯</span>
             <span id="floatingLocationLabel" class="toggle-label">Location</span>
           </button>
         </div>
+
+        <!-- Bottom Center Satellite ⇄ Normal Layer Switcher Button -->
+        <button id="btnToggleMapLayer" class="bottom-center-satellite-btn" onclick="toggleSatelliteLayer()" title="Switch between Satellite (Esri) and Normal (Street) Map">
+          <span id="layerToggleIcon" class="btn-icon">🛰️</span>
+          <span id="layerToggleLabel" class="toggle-label">Satellite View</span>
+        </button>
 
         <!-- Live Speedometer HUD (Bottom Left of Map) - Hidden until speed > 3 km/h like Google Maps -->
         <div id="liveSpeedometerHud" class="live-speedometer-hud" style="display:none;">
@@ -1957,6 +2025,174 @@
   </div>
 </div>
 
+<!-- Distance Measurement Calculator Modal (OHE Pole ⇄ Pole & Asset ⇄ Asset) -->
+<div class="modal-backdrop" id="distanceCalcModal" onclick="if(event.target===this) closeDistanceCalcModal()">
+  <div class="modal-dialog" style="max-width: 650px; height: auto; max-height: 90vh;">
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.25rem;">📐</span>
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:#38bdf8; margin:0;">Track Distance Measurement Calculator</h3>
+          <p style="font-size:0.7rem; color:#94a3b8; margin:2px 0 0 0;">Calculate exact track chainage &amp; distance between OHE poles &amp; railway assets</p>
+        </div>
+      </div>
+      <button class="modal-close-btn" onclick="closeDistanceCalcModal()">✕</button>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div style="display:flex; background:#0f172a; border-bottom:1px solid var(--border-color); padding:4px 8px; gap:6px;">
+      <button id="tabBtnPoleMeasure" class="dist-tab-btn active" onclick="switchDistCalcTab('pole')">
+        <span>⚡ OHE Pole ⇄ Pole</span>
+      </button>
+      <button id="tabBtnAssetMeasure" class="dist-tab-btn" onclick="switchDistCalcTab('asset')">
+        <span>🌉 Asset ⇄ Asset</span>
+      </button>
+    </div>
+
+    <div class="modal-body" style="overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:1rem;">
+      <!-- TAB 1: OHE POLE TO POLE -->
+      <div id="panelPoleMeasure" style="display:block;">
+        <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center;">
+          <!-- Pole A -->
+          <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:10px;">
+            <label style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; display:block; margin-bottom:4px;">⚡ Start Pole (A)</label>
+            <input type="text" id="poleInputA" placeholder="Type Pole (e.g. 1170/01)..." oninput="onPoleSearchInput('A')" style="width:100%; box-sizing:border-box; padding:6px 8px; background:#040711; border:1px solid #475569; color:#fff; border-radius:4px; font-size:12px; font-weight:bold; font-family:monospace;">
+            <select id="poleSelectA" onchange="onPoleSelectChange('A')" style="width:100%; margin-top:6px; padding:5px; background:#0c1322; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:11px;">
+            </select>
+            <button class="btn-tool" onclick="useCurrentForPole('A')" style="margin-top:6px; width:100%; justify-content:center; font-size:10px; padding:2px 4px;">📍 Current KM Nearest</button>
+          </div>
+
+          <!-- Swap Button -->
+          <div>
+            <button class="btn-tool" onclick="swapPoles()" title="Swap Pole A &amp; B" style="padding:8px; border-radius:50%; width:32px; height:32px; justify-content:center; font-weight:bold;">⇄</button>
+          </div>
+
+          <!-- Pole B -->
+          <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:10px;">
+            <label style="font-size:11px; font-weight:700; color:#f59e0b; text-transform:uppercase; display:block; margin-bottom:4px;">⚡ End Pole (B)</label>
+            <input type="text" id="poleInputB" placeholder="Type Pole (e.g. 1173/12)..." oninput="onPoleSearchInput('B')" style="width:100%; box-sizing:border-box; padding:6px 8px; background:#040711; border:1px solid #475569; color:#fff; border-radius:4px; font-size:12px; font-weight:bold; font-family:monospace;">
+            <select id="poleSelectB" onchange="onPoleSelectChange('B')" style="width:100%; margin-top:6px; padding:5px; background:#0c1322; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:11px;">
+            </select>
+            <button class="btn-tool" onclick="useCurrentForPole('B')" style="margin-top:6px; width:100%; justify-content:center; font-size:10px; padding:2px 4px;">📍 Current KM Nearest</button>
+          </div>
+        </div>
+
+        <!-- Result Card for Pole-to-Pole -->
+        <div id="poleResultCard" style="margin-top:14px; background:linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(30, 41, 59, 0.6)); border:1.5px solid #0284c7; border-radius:10px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:8px; margin-bottom:10px;">
+            <span style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Measured Track Distance</span>
+            <span id="poleSpanCountBadge" style="background:#0369a1; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; font-family:monospace;">0 Spans</span>
+          </div>
+
+          <div style="display:flex; align-items:baseline; gap:10px;">
+            <div id="poleDistPrimary" style="font-size:1.8rem; font-weight:900; font-family:monospace; color:#38bdf8;">0.000 <span style="font-size:1rem; font-weight:600; color:#94a3b8;">m</span></div>
+            <div id="poleDistSecondary" style="font-size:1.1rem; font-weight:700; font-family:monospace; color:#f59e0b;">(0.000 Km)</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:11px;">
+            <div style="background:#0b1120; padding:6px 8px; border-radius:6px; border:1px solid #1e293b;">
+              <div style="color:#64748b; font-weight:600;">FROM POLE</div>
+              <div id="poleDetailsA" style="color:#f8fafc; font-family:monospace; margin-top:2px;">--</div>
+            </div>
+            <div style="background:#0b1120; padding:6px 8px; border-radius:6px; border:1px solid #1e293b;">
+              <div style="color:#64748b; font-weight:600;">TO POLE</div>
+              <div id="poleDetailsB" style="color:#f8fafc; font-family:monospace; margin-top:2px;">--</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8; margin-top:8px;">
+            <span>Straight-Line (Aerial): <b id="poleAerialDist" style="color:#cbd5e1;">--</b></span>
+            <span>Avg Span Length: <b id="poleAvgSpan" style="color:#cbd5e1;">--</b></span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn-tool" onclick="highlightMeasuredSpanOnMap('pole')" style="flex:1; justify-content:center; background:#0284c7; color:#fff; font-weight:700; padding:8px 0;">🗺️ Highlight Span on Map</button>
+          <button class="btn-tool" onclick="viewMeasuredSpanInDiagram('pole')" style="flex:1; justify-content:center; background:#1e293b; color:#38bdf8; font-weight:700; padding:8px 0;">📏 View in Diagram</button>
+          <button class="btn-tool" onclick="copyMeasurementDetails('pole')" style="padding:8px 12px;" title="Copy details">📋 Copy</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: ASSET TO ASSET -->
+      <div id="panelAssetMeasure" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center;">
+          <!-- Asset A -->
+          <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:10px;">
+            <label style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; display:block; margin-bottom:4px;">🌉 Start Asset (A)</label>
+            <select id="assetCategoryA" onchange="onAssetCategoryChange('A')" style="width:100%; padding:4px 6px; background:#040711; border:1px solid #334155; color:#94a3b8; border-radius:4px; font-size:11px; margin-bottom:6px;">
+              <option value="ALL">All Asset Categories</option>
+              <option value="Bridge">🌉 Bridges (Major &amp; Minor)</option>
+              <option value="Point">🔀 Points &amp; Crossings</option>
+              <option value="LC">🚧 Level Crossings &amp; ROB/RUB</option>
+              <option value="Station">🏢 Stations / Yard ESP</option>
+              <option value="Curve">📐 Track Curves</option>
+            </select>
+            <select id="assetSelectA" onchange="onAssetSelectChange('A')" style="width:100%; padding:6px; background:#0c1322; border:1px solid #475569; color:#fff; border-radius:4px; font-size:11px; font-weight:600;">
+            </select>
+            <button class="btn-tool" onclick="useCurrentForAsset('A')" style="margin-top:6px; width:100%; justify-content:center; font-size:10px; padding:2px 4px;">📍 Current KM Nearest</button>
+          </div>
+
+          <!-- Swap Button -->
+          <div>
+            <button class="btn-tool" onclick="swapAssets()" title="Swap Asset A &amp; B" style="padding:8px; border-radius:50%; width:32px; height:32px; justify-content:center; font-weight:bold;">⇄</button>
+          </div>
+
+          <!-- Asset B -->
+          <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:10px;">
+            <label style="font-size:11px; font-weight:700; color:#f59e0b; text-transform:uppercase; display:block; margin-bottom:4px;">🌉 End Asset (B)</label>
+            <select id="assetCategoryB" onchange="onAssetCategoryChange('B')" style="width:100%; padding:4px 6px; background:#040711; border:1px solid #334155; color:#94a3b8; border-radius:4px; font-size:11px; margin-bottom:6px;">
+              <option value="ALL">All Asset Categories</option>
+              <option value="Bridge">🌉 Bridges (Major &amp; Minor)</option>
+              <option value="Point">🔀 Points &amp; Crossings</option>
+              <option value="LC">🚧 Level Crossings &amp; ROB/RUB</option>
+              <option value="Station">🏢 Stations / Yard ESP</option>
+              <option value="Curve">📐 Track Curves</option>
+            </select>
+            <select id="assetSelectB" onchange="onAssetSelectChange('B')" style="width:100%; padding:6px; background:#0c1322; border:1px solid #475569; color:#fff; border-radius:4px; font-size:11px; font-weight:600;">
+            </select>
+            <button class="btn-tool" onclick="useCurrentForAsset('B')" style="margin-top:6px; width:100%; justify-content:center; font-size:10px; padding:2px 4px;">📍 Current KM Nearest</button>
+          </div>
+        </div>
+
+        <!-- Result Card for Asset-to-Asset -->
+        <div id="assetResultCard" style="margin-top:14px; background:linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(30, 41, 59, 0.6)); border:1.5px solid #f59e0b; border-radius:10px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:8px; margin-bottom:10px;">
+            <span style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Chainage Separation Distance</span>
+            <span id="assetIntermediateBadge" style="background:#b45309; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; font-family:monospace;">0 Between</span>
+          </div>
+
+          <div style="display:flex; align-items:baseline; gap:10px;">
+            <div id="assetDistPrimary" style="font-size:1.8rem; font-weight:900; font-family:monospace; color:#fbbf24;">0.000 <span style="font-size:1rem; font-weight:600; color:#94a3b8;">m</span></div>
+            <div id="assetDistSecondary" style="font-size:1.1rem; font-weight:700; font-family:monospace; color:#38bdf8;">(0.000 Km)</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:11px;">
+            <div style="background:#0b1120; padding:6px 8px; border-radius:6px; border:1px solid #1e293b;">
+              <div style="color:#64748b; font-weight:600;">START ASSET</div>
+              <div id="assetDetailsA" style="color:#f8fafc; font-family:monospace; margin-top:2px;">--</div>
+            </div>
+            <div style="background:#0b1120; padding:6px 8px; border-radius:6px; border:1px solid #1e293b;">
+              <div style="color:#64748b; font-weight:600;">END ASSET</div>
+              <div id="assetDetailsB" style="color:#f8fafc; font-family:monospace; margin-top:2px;">--</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8; margin-top:8px;">
+            <span>Intermediate OHE Masts: <b id="assetIntermediateOhe" style="color:#cbd5e1;">--</b></span>
+            <span>Intermediate Bridges: <b id="assetIntermediateBridges" style="color:#cbd5e1;">--</b></span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn-tool" onclick="highlightMeasuredSpanOnMap('asset')" style="flex:1; justify-content:center; background:#f59e0b; color:#000; font-weight:700; padding:8px 0;">🗺️ Highlight Span on Map</button>
+          <button class="btn-tool" onclick="viewMeasuredSpanInDiagram('asset')" style="flex:1; justify-content:center; background:#1e293b; color:#38bdf8; font-weight:700; padding:8px 0;">📏 View in Diagram</button>
+          <button class="btn-tool" onclick="copyMeasurementDetails('asset')" style="padding:8px 12px;" title="Copy details">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Workstation Orchestrator Script -->
 <script>
 // Global State
@@ -1972,6 +2208,10 @@ let curveHitboxes = [];
 
 // Map variables
 let map = null;
+let streetMapLayer = null;
+let esriSatelliteLayer = null;
+let googleHybridLayer = null;
+let measureHighlightLayerGroup = null;
 let livePinMarker = null;
 let trackPolyline = null;
 let oheGroup = null;
@@ -2263,16 +2503,16 @@ function initMap() {
     setTimeout(initMap, 300);
     return;
   }
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  streetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 20,
     attribution: '© OpenStreetMap contributors'
   });
-  const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  esriSatelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 20,
     maxNativeZoom: 18,
-    attribution: 'Esri, Maxar, Earthstar Geographics'
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
   });
-  const googleHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+  googleHybridLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
     subdomains: ['0', '1', '2', '3'],
     maxZoom: 21,
     attribution: '© Google Maps'
@@ -2289,8 +2529,10 @@ function initMap() {
     wheelDebounceTime: 40,
     zoomAnimation: true,
     fadeAnimation: true,
-    layers: [osm]
+    layers: [streetMapLayer]
   });
+
+  measureHighlightLayerGroup = L.layerGroup().addTo(map);
 
   // Track alignment line (calibrated from 8,734 dense 10m points aligned to surveyed OHE poles)
   const latlngs = parsedTrackCoords.map(p => [p.lat, p.lon]);
@@ -2906,19 +3148,21 @@ function initMap() {
 
   // Layer Controls: Street Map (default), Esri, Google Maps
   const baseMaps = { 
-    "Street Map (OpenStreetMap)": osm,
-    "Esri Satellite": esriSatellite, 
-    "Google Satellite (HD)": googleHybrid
+    "Street Map (Normal View)": streetMapLayer,
+    "Esri Satellite (Satellite View)": esriSatelliteLayer, 
+    "Google Satellite (HD)": googleHybridLayer
   };
 
-  // Google Maps Confirmation Interceptor
-  activeBaseMapLayer = osm;
+  // Google Maps Confirmation Interceptor & Button Sync
+  activeBaseMapLayer = streetMapLayer;
   map.on('baselayerchange', function(e) {
-    if (e.layer === googleHybrid) {
+    if (e.layer === googleHybridLayer) {
       pendingGmapLayer = e.layer;
       openGoogleMapConfirmModal();
     } else {
       activeBaseMapLayer = e.layer;
+      isSatelliteActive = (e.layer === esriSatelliteLayer);
+      updateSatelliteToggleButtonUI();
     }
   });
   const overlays = { 
@@ -6022,28 +6266,35 @@ function updateKmResultPopup(km, gps, isLinkLine = false) {
 // SATELLITE ⇄ NORMAL LAYER SWITCHER & TECHNICAL DETAILS POPUP
 // -------------------------------------------------------------
 let isSatelliteActive = false;
-function toggleSatelliteLayer() {
-  if (!map) return;
-  isSatelliteActive = !isSatelliteActive;
+function updateSatelliteToggleButtonUI() {
   const icon = document.getElementById('layerToggleIcon');
   const label = document.getElementById('layerToggleLabel');
+  const btn = document.getElementById('btnToggleMapLayer');
+  if (isSatelliteActive) {
+    if (icon) icon.textContent = '🗺️';
+    if (label) label.textContent = 'Normal View';
+    if (btn) btn.classList.add('active-satellite');
+  } else {
+    if (icon) icon.textContent = '🛰️';
+    if (label) label.textContent = 'Satellite View';
+    if (btn) btn.classList.remove('active-satellite');
+  }
+}
+
+function toggleSatelliteLayer() {
+  if (!map || !streetMapLayer || !esriSatelliteLayer) return;
+  isSatelliteActive = !isSatelliteActive;
   
   if (isSatelliteActive) {
-    if (typeof osm !== 'undefined' && map.hasLayer(osm)) map.removeLayer(osm);
-    if (typeof googleHybrid !== 'undefined' && !map.hasLayer(googleHybrid)) {
-      googleHybrid.addTo(map);
-    } else if (typeof esriSatellite !== 'undefined' && !map.hasLayer(esriSatellite)) {
-      esriSatellite.addTo(map);
-    }
-    if (icon) icon.textContent = '🗺️';
-    if (label) label.textContent = 'Normal';
+    if (map.hasLayer(streetMapLayer)) map.removeLayer(streetMapLayer);
+    if (googleHybridLayer && map.hasLayer(googleHybridLayer)) map.removeLayer(googleHybridLayer);
+    if (!map.hasLayer(esriSatelliteLayer)) esriSatelliteLayer.addTo(map);
   } else {
-    if (typeof googleHybrid !== 'undefined' && map.hasLayer(googleHybrid)) map.removeLayer(googleHybrid);
-    if (typeof esriSatellite !== 'undefined' && map.hasLayer(esriSatellite)) map.removeLayer(esriSatellite);
-    if (typeof osm !== 'undefined' && !map.hasLayer(osm)) osm.addTo(map);
-    if (icon) icon.textContent = '🛰️';
-    if (label) label.textContent = 'Satellite';
+    if (map.hasLayer(esriSatelliteLayer)) map.removeLayer(esriSatelliteLayer);
+    if (googleHybridLayer && map.hasLayer(googleHybridLayer)) map.removeLayer(googleHybridLayer);
+    if (!map.hasLayer(streetMapLayer)) streetMapLayer.addTo(map);
   }
+  updateSatelliteToggleButtonUI();
 }
 
 function togglePopupTechnicalDetails() {
@@ -6166,9 +6417,589 @@ function resetMapNorth() {
 }
 
 // -------------------------------------------------------------
+// 8B. DISTANCE MEASUREMENT CALCULATOR (POLE-TO-POLE & ASSET-TO-ASSET)
+// -------------------------------------------------------------
+let activeDistCalcTab = 'pole';
+let allTrackAssetsCache = null;
+
+function openDistanceCalcModal() {
+  const modal = document.getElementById('distanceCalcModal');
+  if (modal) {
+    modal.classList.add('open');
+    initDistanceCalculator();
+  }
+}
+
+function closeDistanceCalcModal() {
+  const modal = document.getElementById('distanceCalcModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function switchDistCalcTab(tab) {
+  activeDistCalcTab = tab;
+  const btnPole = document.getElementById('tabBtnPoleMeasure');
+  const btnAsset = document.getElementById('tabBtnAssetMeasure');
+  const panelPole = document.getElementById('panelPoleMeasure');
+  const panelAsset = document.getElementById('panelAssetMeasure');
+
+  if (tab === 'pole') {
+    if (btnPole) btnPole.classList.add('active');
+    if (btnAsset) btnAsset.classList.remove('active');
+    if (panelPole) panelPole.style.display = 'block';
+    if (panelAsset) panelAsset.style.display = 'none';
+    updatePoleMeasurement();
+  } else {
+    if (btnPole) btnPole.classList.remove('active');
+    if (btnAsset) btnAsset.classList.add('active');
+    if (panelPole) panelPole.style.display = 'none';
+    if (panelAsset) panelAsset.style.display = 'block';
+    updateAssetMeasurement();
+  }
+}
+
+function initDistanceCalculator() {
+  populatePoleSelects();
+  populateAssetSelects();
+  if (activeDistCalcTab === 'pole') {
+    updatePoleMeasurement();
+  } else {
+    updateAssetMeasurement();
+  }
+}
+
+function populatePoleSelects() {
+  if (typeof OHE_POLES_DATA === 'undefined' || !Array.isArray(OHE_POLES_DATA) || !OHE_POLES_DATA.length) return;
+  const selA = document.getElementById('poleSelectA');
+  const selB = document.getElementById('poleSelectB');
+  if (!selA || !selB) return;
+
+  if (selA.options.length > 1) return; // already populated
+
+  selA.innerHTML = '';
+  selB.innerHTML = '';
+
+  OHE_POLES_DATA.forEach((p, idx) => {
+    const optText = `Pole ${p.poleNo} (KM ${p.chainage.toFixed(3)} - ${p.section})`;
+    const optA = new Option(optText, p.poleNo);
+    const optB = new Option(optText, p.poleNo);
+    selA.add(optA);
+    selB.add(optB);
+  });
+
+  // Set default pole A to nearest to currentKm
+  const nearest = findNearestOhePoleToKm(currentKm);
+  if (nearest) {
+    selA.value = nearest.poleNo;
+    const inpA = document.getElementById('poleInputA');
+    if (inpA) inpA.value = nearest.poleNo;
+
+    // Default pole B to ~1 km ahead or 20th pole ahead
+    const idxA = OHE_POLES_DATA.findIndex(p => p.poleNo === nearest.poleNo);
+    const idxB = Math.min(OHE_POLES_DATA.length - 1, idxA + 20);
+    const targetB = OHE_POLES_DATA[idxB];
+    if (targetB) {
+      selB.value = targetB.poleNo;
+      const inpB = document.getElementById('poleInputB');
+      if (inpB) inpB.value = targetB.poleNo;
+    }
+  }
+}
+
+function findNearestOhePoleToKm(km) {
+  if (typeof OHE_POLES_DATA === 'undefined' || !Array.isArray(OHE_POLES_DATA) || !OHE_POLES_DATA.length) return null;
+  let best = OHE_POLES_DATA[0];
+  let minDiff = Math.abs(OHE_POLES_DATA[0].chainage - km);
+  for (let i = 1; i < OHE_POLES_DATA.length; i++) {
+    const d = Math.abs(OHE_POLES_DATA[i].chainage - km);
+    if (d < minDiff) {
+      minDiff = d;
+      best = OHE_POLES_DATA[i];
+    }
+  }
+  return best;
+}
+
+function onPoleSearchInput(side) {
+  const inp = document.getElementById(side === 'A' ? 'poleInputA' : 'poleInputB');
+  const sel = document.getElementById(side === 'A' ? 'poleSelectA' : 'poleSelectB');
+  if (!inp || !sel) return;
+  const q = inp.value.trim().toLowerCase();
+  if (!q) return;
+
+  const match = OHE_POLES_DATA.find(p => p.poleNo.toLowerCase().includes(q));
+  if (match) {
+    sel.value = match.poleNo;
+    updatePoleMeasurement();
+  }
+}
+
+function onPoleSelectChange(side) {
+  const inp = document.getElementById(side === 'A' ? 'poleInputA' : 'poleInputB');
+  const sel = document.getElementById(side === 'A' ? 'poleSelectA' : 'poleSelectB');
+  if (inp && sel) inp.value = sel.value;
+  updatePoleMeasurement();
+}
+
+function useCurrentForPole(side) {
+  const nearest = findNearestOhePoleToKm(currentKm);
+  if (!nearest) return;
+  const inp = document.getElementById(side === 'A' ? 'poleInputA' : 'poleInputB');
+  const sel = document.getElementById(side === 'A' ? 'poleSelectA' : 'poleSelectB');
+  if (inp) inp.value = nearest.poleNo;
+  if (sel) sel.value = nearest.poleNo;
+  updatePoleMeasurement();
+}
+
+function swapPoles() {
+  const inpA = document.getElementById('poleInputA');
+  const selA = document.getElementById('poleSelectA');
+  const inpB = document.getElementById('poleInputB');
+  const selB = document.getElementById('poleSelectB');
+
+  const valA = selA ? selA.value : '';
+  const valB = selB ? selB.value : '';
+
+  if (selA) selA.value = valB;
+  if (inpA) inpA.value = valB;
+  if (selB) selB.value = valA;
+  if (inpB) inpB.value = valA;
+
+  updatePoleMeasurement();
+}
+
+function updatePoleMeasurement() {
+  const selA = document.getElementById('poleSelectA');
+  const selB = document.getElementById('poleSelectB');
+  if (!selA || !selB || typeof OHE_POLES_DATA === 'undefined') return;
+
+  const poleA = OHE_POLES_DATA.find(p => p.poleNo === selA.value);
+  const poleB = OHE_POLES_DATA.find(p => p.poleNo === selB.value);
+  if (!poleA || !poleB) return;
+
+  const idxA = OHE_POLES_DATA.indexOf(poleA);
+  const idxB = OHE_POLES_DATA.indexOf(poleB);
+  const spanCount = Math.abs(idxB - idxA);
+
+  const chainageDiffKm = Math.abs(poleB.chainage - poleA.chainage);
+  const distanceMeters = chainageDiffKm * 1000;
+  const aerialDist = haversineMeters(poleA.lat, poleA.lon, poleB.lat, poleB.lon);
+  const avgSpan = spanCount > 0 ? (distanceMeters / spanCount).toFixed(1) + ' m' : '--';
+
+  const elPrimary = document.getElementById('poleDistPrimary');
+  const elSecondary = document.getElementById('poleDistSecondary');
+  const elSpanBadge = document.getElementById('poleSpanCountBadge');
+  const elDetA = document.getElementById('poleDetailsA');
+  const elDetB = document.getElementById('poleDetailsB');
+  const elAerial = document.getElementById('poleAerialDist');
+  const elAvgSpan = document.getElementById('poleAvgSpan');
+
+  if (elPrimary) elPrimary.innerHTML = `${distanceMeters.toFixed(2)} <span style="font-size:1rem; font-weight:600; color:#94a3b8;">m</span>`;
+  if (elSecondary) elSecondary.textContent = `(${chainageDiffKm.toFixed(3)} Km)`;
+  if (elSpanBadge) elSpanBadge.textContent = `${spanCount} Spans`;
+  if (elDetA) elDetA.textContent = `Pole ${poleA.poleNo} • KM ${poleA.chainage.toFixed(3)} • ${poleA.section}`;
+  if (elDetB) elDetB.textContent = `Pole ${poleB.poleNo} • KM ${poleB.chainage.toFixed(3)} • ${poleB.section}`;
+  if (elAerial) elAerial.textContent = `${aerialDist.toFixed(1)} m (${(aerialDist/1000).toFixed(3)} km)`;
+  if (elAvgSpan) elAvgSpan.textContent = avgSpan;
+}
+
+// Unified Asset List Generation
+function getAllTrackAssetsList() {
+  if (allTrackAssetsCache) return allTrackAssetsCache;
+  const list = [];
+
+  // 1. Bridges
+  if (DB_DATA && Array.isArray(DB_DATA.bridges)) {
+    DB_DATA.bridges.forEach(b => {
+      list.push({
+        cat: 'Bridge',
+        id: 'BR_' + b.bridge_no,
+        name: `Bridge #${b.bridge_no} (${b.structure_type || 'Girder/Arch'})`,
+        chainage: b.chainage,
+        station: b.station || '--',
+        details: `Span: ${b.span_configuration || '--'}, Length: ${b.overall_length || '--'}m`,
+        lat: b.lat,
+        lon: b.lon
+      });
+    });
+  }
+
+  // 2. Points & Crossings
+  if (DB_DATA && Array.isArray(DB_DATA.points_and_crossings)) {
+    DB_DATA.points_and_crossings.forEach(p => {
+      list.push({
+        cat: 'Point',
+        id: 'PT_' + p.point_no,
+        name: `Point #${p.point_no} (${p.type || 'Turnout'})`,
+        chainage: p.srj_chainage,
+        station: p.station || '--',
+        details: `Angle: ${p.crossing_angle || '1:12'}, Sleepers: ${p.rail_section || '60Kg'}`,
+        lat: p.lat,
+        lon: p.lon
+      });
+    });
+  }
+
+  // 3. Level Crossings
+  if (DB_DATA && Array.isArray(DB_DATA.level_crossings)) {
+    DB_DATA.level_crossings.forEach(lc => {
+      list.push({
+        cat: 'LC',
+        id: 'LC_' + lc.lc_no,
+        name: `LC #${lc.lc_no} (${lc.class || lc.type || 'Level Crossing'})`,
+        chainage: lc.chainage,
+        station: lc.station || '--',
+        details: `Class: ${lc.class || '--'}, Width: ${lc.width || '--'}m`,
+        lat: lc.lat,
+        lon: lc.lon
+      });
+    });
+  }
+
+  // 4. Stations
+  const stations = [
+    { code: 'SMUN', name: 'SMUN (New Shambhu)', km: 1170.435, lat: 30.438784, lon: 76.667473 },
+    { code: 'RPJ',  name: 'RPJ Link Line Bifurcation', km: 1178.150, lat: 30.479375, lon: 76.604647 },
+    { code: 'SBJN', name: 'SBJN (Sarai Banjara)', km: 1188.575, lat: 30.537175, lon: 76.517382 },
+    { code: 'NSIR', name: 'NSIR (New Sirhind)', km: 1202.015, lat: 30.610457, lon: 76.405747 },
+    { code: 'GVGN', name: 'GVGN (Gobindgarh)', km: 1213.187, lat: 30.658323, lon: 76.319703 },
+    { code: 'KNNN', name: 'KNNN (New Khanna)', km: 1229.087, lat: 30.732837, lon: 76.178161 },
+    { code: 'CHAN', name: 'CHAN (Chawa Pail)', km: 1237.576, lat: 30.772858, lon: 76.102566 },
+    { code: 'SNL',  name: 'SNL (Sanahwal)', km: 1249.700, lat: 30.852445, lon: 75.996112 }
+  ];
+  stations.forEach(s => {
+    list.push({
+      cat: 'Station',
+      id: 'STN_' + s.code,
+      name: `Station ${s.name}`,
+      chainage: s.km,
+      station: s.code,
+      details: `DFCC Station Centre & Yard Jurisdiction`,
+      lat: s.lat,
+      lon: s.lon
+    });
+  });
+
+  // 5. Curves
+  if (DB_DATA && Array.isArray(DB_DATA.curves)) {
+    DB_DATA.curves.forEach(c => {
+      list.push({
+        cat: 'Curve',
+        id: 'CRV_' + c.curve_no,
+        name: `Curve #${c.curve_no} (R=${c.radius}m)`,
+        chainage: c.start_chainage,
+        station: c.station || '--',
+        details: `Radius: ${c.radius}m, Degree: ${c.degree || '--'}°`,
+        lat: c.lat || 0,
+        lon: c.lon || 0
+      });
+    });
+  }
+
+  list.sort((a, b) => a.chainage - b.chainage);
+  allTrackAssetsCache = list;
+  return list;
+}
+
+function populateAssetSelects() {
+  renderAssetOptions('A');
+  renderAssetOptions('B');
+}
+
+function renderAssetOptions(side) {
+  const catSel = document.getElementById(side === 'A' ? 'assetCategoryA' : 'assetCategoryB');
+  const sel = document.getElementById(side === 'A' ? 'assetSelectA' : 'assetSelectB');
+  if (!sel) return;
+
+  const cat = catSel ? catSel.value : 'ALL';
+  const assets = getAllTrackAssetsList();
+  const filtered = (cat === 'ALL') ? assets : assets.filter(a => a.cat === cat);
+
+  const prevVal = sel.value;
+  sel.innerHTML = '';
+  filtered.forEach(a => {
+    const optText = `${a.name} [KM ${a.chainage.toFixed(3)}]`;
+    const opt = new Option(optText, a.id);
+    sel.add(opt);
+  });
+
+  if (prevVal && filtered.some(a => a.id === prevVal)) {
+    sel.value = prevVal;
+  } else if (filtered.length > 0) {
+    if (side === 'B' && filtered.length > 1) {
+      sel.selectedIndex = Math.min(filtered.length - 1, 1);
+    }
+  }
+}
+
+function onAssetCategoryChange(side) {
+  renderAssetOptions(side);
+  updateAssetMeasurement();
+}
+
+function onAssetSelectChange(side) {
+  updateAssetMeasurement();
+}
+
+function useCurrentForAsset(side) {
+  const assets = getAllTrackAssetsList();
+  if (!assets.length) return;
+  let best = assets[0];
+  let minDiff = Math.abs(assets[0].chainage - currentKm);
+  for (let i = 1; i < assets.length; i++) {
+    const d = Math.abs(assets[i].chainage - currentKm);
+    if (d < minDiff) {
+      minDiff = d;
+      best = assets[i];
+    }
+  }
+  const catSel = document.getElementById(side === 'A' ? 'assetCategoryA' : 'assetCategoryB');
+  if (catSel) catSel.value = 'ALL';
+  renderAssetOptions(side);
+
+  const sel = document.getElementById(side === 'A' ? 'assetSelectA' : 'assetSelectB');
+  if (sel) sel.value = best.id;
+  updateAssetMeasurement();
+}
+
+function swapAssets() {
+  const selA = document.getElementById('assetSelectA');
+  const selB = document.getElementById('assetSelectB');
+  const catA = document.getElementById('assetCategoryA');
+  const catB = document.getElementById('assetCategoryB');
+
+  const valA = selA ? selA.value : '';
+  const valB = selB ? selB.value : '';
+  const cA = catA ? catA.value : 'ALL';
+  const cB = catB ? catB.value : 'ALL';
+
+  if (catA) catA.value = cB;
+  if (catB) catB.value = cA;
+  renderAssetOptions('A');
+  renderAssetOptions('B');
+
+  if (selA) selA.value = valB;
+  if (selB) selB.value = valA;
+
+  updateAssetMeasurement();
+}
+
+function updateAssetMeasurement() {
+  const selA = document.getElementById('assetSelectA');
+  const selB = document.getElementById('assetSelectB');
+  if (!selA || !selB) return;
+
+  const assets = getAllTrackAssetsList();
+  const assetA = assets.find(a => a.id === selA.value);
+  const assetB = assets.find(a => a.id === selB.value);
+  if (!assetA || !assetB) return;
+
+  const chainageDiffKm = Math.abs(assetB.chainage - assetA.chainage);
+  const distanceMeters = chainageDiffKm * 1000;
+  const kmMin = Math.min(assetA.chainage, assetB.chainage);
+  const kmMax = Math.max(assetA.chainage, assetB.chainage);
+
+  let countOhe = 0;
+  if (typeof OHE_POLES_DATA !== 'undefined' && Array.isArray(OHE_POLES_DATA)) {
+    countOhe = OHE_POLES_DATA.filter(p => p.chainage >= kmMin && p.chainage <= kmMax).length;
+  }
+  const countBridges = (DB_DATA.bridges || []).filter(b => b.chainage >= kmMin && b.chainage <= kmMax).length;
+  const countTurnouts = (DB_DATA.points_and_crossings || []).filter(p => p.srj_chainage >= kmMin && p.srj_chainage <= kmMax).length;
+
+  const elPrimary = document.getElementById('assetDistPrimary');
+  const elSecondary = document.getElementById('assetDistSecondary');
+  const elIntermediateBadge = document.getElementById('assetIntermediateBadge');
+  const elDetA = document.getElementById('assetDetailsA');
+  const elDetB = document.getElementById('assetDetailsB');
+  const elInterOhe = document.getElementById('assetIntermediateOhe');
+  const elInterBridges = document.getElementById('assetIntermediateBridges');
+
+  if (elPrimary) elPrimary.innerHTML = `${distanceMeters.toFixed(2)} <span style="font-size:1rem; font-weight:600; color:#94a3b8;">m</span>`;
+  if (elSecondary) elSecondary.textContent = `(${chainageDiffKm.toFixed(3)} Km)`;
+  if (elIntermediateBadge) elIntermediateBadge.textContent = `${countOhe} Poles • ${countBridges} Bridges • ${countTurnouts} P&C`;
+  if (elDetA) elDetA.textContent = `${assetA.name} • KM ${assetA.chainage.toFixed(3)} (${assetA.station})`;
+  if (elDetB) elDetB.textContent = `${assetB.name} • KM ${assetB.chainage.toFixed(3)} (${assetB.station})`;
+  if (elInterOhe) elInterOhe.textContent = `${countOhe} Masts`;
+  if (elInterBridges) elInterBridges.textContent = `${countBridges} Bridges, ${countTurnouts} Turnouts`;
+}
+
+// Highlighting & Visual Actions
+function highlightMeasuredSpanOnMap(type) {
+  closeDistanceCalcModal();
+  if (!map || !measureHighlightLayerGroup) return;
+
+  measureHighlightLayerGroup.clearLayers();
+
+  let kmA, kmB, labelA, labelB, latA, lonA, latB, lonB;
+  if (type === 'pole') {
+    const selA = document.getElementById('poleSelectA');
+    const selB = document.getElementById('poleSelectB');
+    if (!selA || !selB || typeof OHE_POLES_DATA === 'undefined') return;
+    const pA = OHE_POLES_DATA.find(p => p.poleNo === selA.value);
+    const pB = OHE_POLES_DATA.find(p => p.poleNo === selB.value);
+    if (!pA || !pB) return;
+    kmA = pA.chainage;
+    kmB = pB.chainage;
+    labelA = `Pole ${pA.poleNo} (KM ${kmA.toFixed(3)})`;
+    labelB = `Pole ${pB.poleNo} (KM ${kmB.toFixed(3)})`;
+    latA = pA.lat; lonA = pA.lon;
+    latB = pB.lat; lonB = pB.lon;
+  } else {
+    const selA = document.getElementById('assetSelectA');
+    const selB = document.getElementById('assetSelectB');
+    if (!selA || !selB) return;
+    const assets = getAllTrackAssetsList();
+    const aA = assets.find(a => a.id === selA.value);
+    const aB = assets.find(a => a.id === selB.value);
+    if (!aA || !aB) return;
+    kmA = aA.chainage;
+    kmB = aB.chainage;
+    labelA = `${aA.name} (KM ${kmA.toFixed(3)})`;
+    labelB = `${aB.name} (KM ${kmB.toFixed(3)})`;
+    const gA = aA.lat ? { lat: aA.lat, lon: aA.lon } : getInterpolatedGps(kmA);
+    const gB = aB.lat ? { lat: aB.lat, lon: aB.lon } : getInterpolatedGps(kmB);
+    latA = gA.lat; lonA = gA.lon;
+    latB = gB.lat; lonB = gB.lon;
+  }
+
+  const kmMin = Math.min(kmA, kmB);
+  const kmMax = Math.max(kmA, kmB);
+  const distMeters = (kmMax - kmMin) * 1000;
+
+  const trackPts = parsedTrackCoords.filter(p => p.km >= (kmMin - 0.005) && p.km <= (kmMax + 0.005));
+  let polyPts = trackPts.map(p => [p.lat, p.lon]);
+  if (polyPts.length < 2) {
+    polyPts = [[latA, lonA], [latB, lonB]];
+  }
+
+  // 1. Glow outer line
+  const glowLine = L.polyline(polyPts, {
+    color: '#f59e0b',
+    weight: 9,
+    opacity: 0.85,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(measureHighlightLayerGroup);
+
+  // 2. Bright inner line
+  L.polyline(polyPts, {
+    color: '#fef08a',
+    weight: 4,
+    opacity: 1.0,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(measureHighlightLayerGroup);
+
+  // 3. Start Marker
+  const startIcon = L.divIcon({
+    className: 'measure-pin-start',
+    html: `<div style="background:#16a34a; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px; border:2px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.6); white-space:nowrap;">🟢 START</div>`,
+    iconSize: [60, 24],
+    iconAnchor: [30, 24]
+  });
+  L.marker([latA, lonA], { icon: startIcon }).addTo(measureHighlightLayerGroup).bindTooltip(`Start: ${labelA}`, { permanent: true, direction: 'top' });
+
+  // 4. End Marker
+  const endIcon = L.divIcon({
+    className: 'measure-pin-end',
+    html: `<div style="background:#dc2626; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px; border:2px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.6); white-space:nowrap;">🔴 END</div>`,
+    iconSize: [60, 24],
+    iconAnchor: [30, 24]
+  });
+  L.marker([latB, lonB], { icon: endIcon }).addTo(measureHighlightLayerGroup).bindTooltip(`End: ${labelB}`, { permanent: true, direction: 'top' });
+
+  // 5. Midpoint Distance Label
+  const midIdx = Math.floor(polyPts.length / 2);
+  const midCoord = polyPts[midIdx] || [(latA + latB) / 2, (lonA + lonB) / 2];
+  const distBadgeIcon = L.divIcon({
+    className: 'measure-dist-badge',
+    html: `<div style="background:#090d16; color:#fbbf24; border:1.5px solid #f59e0b; font-size:12px; font-weight:900; font-family:monospace; padding:4px 10px; border-radius:14px; box-shadow:0 4px 15px rgba(0,0,0,0.85); white-space:nowrap;">📏 ${distMeters.toFixed(1)} m (${(distMeters/1000).toFixed(3)} Km)</div>`,
+    iconSize: [120, 28],
+    iconAnchor: [60, 14]
+  });
+  L.marker(midCoord, { icon: distBadgeIcon }).addTo(measureHighlightLayerGroup);
+
+  // Fit bounds
+  map.fitBounds(glowLine.getBounds(), { padding: [60, 60] });
+
+  if (viewMode === 'linear') {
+    setViewMode('map');
+  }
+}
+
+function viewMeasuredSpanInDiagram(type) {
+  closeDistanceCalcModal();
+  let kmA, kmB;
+  if (type === 'pole') {
+    const selA = document.getElementById('poleSelectA');
+    const selB = document.getElementById('poleSelectB');
+    if (!selA || !selB || typeof OHE_POLES_DATA === 'undefined') return;
+    const pA = OHE_POLES_DATA.find(p => p.poleNo === selA.value);
+    const pB = OHE_POLES_DATA.find(p => p.poleNo === selB.value);
+    if (!pA || !pB) return;
+    kmA = pA.chainage;
+    kmB = pB.chainage;
+  } else {
+    const selA = document.getElementById('assetSelectA');
+    const selB = document.getElementById('assetSelectB');
+    if (!selA || !selB) return;
+    const assets = getAllTrackAssetsList();
+    const aA = assets.find(a => a.id === selA.value);
+    const aB = assets.find(a => a.id === selB.value);
+    if (!aA || !aB) return;
+    kmA = aA.chainage;
+    kmB = aB.chainage;
+  }
+
+  const kmMin = Math.min(kmA, kmB);
+  const kmMax = Math.max(kmA, kmB);
+  const span = Math.max(2.0, (kmMax - kmMin) * 1.35);
+  const mid = (kmMin + kmMax) / 2;
+
+  setViewMode('linear');
+  viewKmStart = Math.max(minCorridorKm, mid - span / 2);
+  viewKmSpan = span;
+  zoomAtKm(mid, 1.0);
+}
+
+function copyMeasurementDetails(type) {
+  let text = '';
+  if (type === 'pole') {
+    const pA = document.getElementById('poleDetailsA')?.textContent || '';
+    const pB = document.getElementById('poleDetailsB')?.textContent || '';
+    const dist = document.getElementById('poleDistPrimary')?.textContent || '';
+    const km = document.getElementById('poleDistSecondary')?.textContent || '';
+    const spans = document.getElementById('poleSpanCountBadge')?.textContent || '';
+    text = `🚆 DFCCIL Distance Measurement (Pole to Pole)\nFrom: ${pA}\nTo: ${pB}\nTrack Distance: ${dist} ${km}\nSpans: ${spans}`;
+  } else {
+    const aA = document.getElementById('assetDetailsA')?.textContent || '';
+    const aB = document.getElementById('assetDetailsB')?.textContent || '';
+    const dist = document.getElementById('assetDistPrimary')?.textContent || '';
+    const km = document.getElementById('assetDistSecondary')?.textContent || '';
+    const items = document.getElementById('assetIntermediateBadge')?.textContent || '';
+    text = `🚆 DFCCIL Distance Measurement (Asset to Asset)\nStart: ${aA}\nEnd: ${aB}\nTrack Distance: ${dist} ${km}\nIntermediate: ${items}`;
+  }
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✓ Measurement details copied to clipboard!');
+    }).catch(() => {
+      alert(text);
+    });
+  } else {
+    alert(text);
+  }
+}
+
+// -------------------------------------------------------------
 // 9. HARDWARE BACK BUTTON HOOK FOR ANDROID
 // -------------------------------------------------------------
 window.onAndroidBackButton = function() {
+  // 0. Close distance calculator modal if open
+  const distModal = document.getElementById('distanceCalcModal');
+  if (distModal && distModal.classList.contains('open')) {
+    closeDistanceCalcModal();
+    return true;
+  }
   // 1. Close 3-dots options menu if open
   const threeDots = document.getElementById('threeDotsDropdown');
   if (threeDots && threeDots.style.display === 'block') {
