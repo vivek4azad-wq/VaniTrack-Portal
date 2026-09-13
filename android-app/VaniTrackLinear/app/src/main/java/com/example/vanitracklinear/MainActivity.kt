@@ -46,31 +46,44 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Make Activity truly fullscreen & hide notification status bar
-        hideSystemUI()
+        try {
+            hideSystemUI()
+        } catch (e: Exception) {
+            android.util.Log.e("DFC_MAP", "hideSystemUI error: ${e.message}")
+        }
 
         // Check runtime permissions for live GPS tracking & Camera inspection
-        val permissionsToRequest = mutableListOf<String>()
-        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
-            permissionsToRequest.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-        }
-        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(android.Manifest.permission.CAMERA)
-        }
-        if (permissionsToRequest.isNotEmpty()) {
-            requestPermissions(permissionsToRequest.toTypedArray(), 1001)
+        try {
+            val permissionsToRequest = mutableListOf<String>()
+            if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                permissionsToRequest.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
+            if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(android.Manifest.permission.CAMERA)
+            }
+            if (permissionsToRequest.isNotEmpty()) {
+                requestPermissions(permissionsToRequest.toTypedArray(), 1001)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DFC_MAP", "Permission error: ${e.message}")
         }
 
         webView = WebView(this).apply {
+            setBackgroundColor(android.graphics.Color.parseColor("#070a13"))
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.databaseEnabled = true
             settings.setGeolocationEnabled(true)
             settings.allowFileAccess = true
             settings.allowContentAccess = true
+            settings.allowFileAccessFromFileURLs = true
+            settings.allowUniversalAccessFromFileURLs = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.mediaPlaybackRequiresUserGesture = false
             
             // Expose native Android methods to Web App
             addJavascriptInterface(WebAppInterface(this@MainActivity), "AndroidNative")
@@ -81,6 +94,11 @@ class MainActivity : ComponentActivity() {
                     callback: GeolocationPermissions.Callback?
                 ) {
                     callback?.invoke(origin, true, false)
+                }
+
+                override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                    android.util.Log.d("DFC_MAP_JS", "${consoleMessage?.message()} -- line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
+                    return true
                 }
 
                 override fun onShowFileChooser(
@@ -104,6 +122,22 @@ class MainActivity : ComponentActivity() {
             }
 
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                    val url = request?.url?.toString()
+                    if (url != null && (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("intent:") || url.startsWith("https://wa.me/"))) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            startActivity(intent)
+                            return true
+                        } catch (e: Exception) {
+                            Toast.makeText(this@MainActivity, "Cannot handle action: " + e.message, Toast.LENGTH_SHORT).show()
+                            return true
+                        }
+                    }
+                    return super.shouldOverrideUrlLoading(view, request)
+                }
+
+                @Deprecated("Deprecated in Java")
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                     if (url != null && (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("intent:") || url.startsWith("https://wa.me/"))) {
                         try {
@@ -118,16 +152,9 @@ class MainActivity : ComponentActivity() {
                     return super.shouldOverrideUrlLoading(view, url)
                 }
 
-                override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
-                    if (url != null && url.endsWith("track_data.json")) {
-                        try {
-                            val stream: InputStream = assets.open("track_data.json")
-                            return WebResourceResponse("application/json", "UTF-8", stream)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                    return super.shouldInterceptRequest(view, url)
+                override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                    super.onReceivedError(view, request, error)
+                    android.util.Log.e("DFC_MAP", "WebView Error: ${error?.description}")
                 }
             }
         }
