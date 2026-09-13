@@ -1057,22 +1057,16 @@
       color: #ffffff;
       box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
     }
-    .floating-action-btn.compass-btn {
-      width: 42px;
-      height: 42px;
-      padding: 0;
-      justify-content: center;
-      border-radius: 50%;
-      font-size: 16px;
+    .floating-action-btn.my-location-btn {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border: 1.5px solid #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 4px 18px rgba(2, 132, 199, 0.4);
     }
-    .floating-action-btn.fit-btn {
-      width: 42px;
-      height: 42px;
-      padding: 0;
-      justify-content: center;
-      border-radius: 50%;
-      color: #38bdf8;
-      font-size: 16px;
+    .floating-action-btn.my-location-btn.active {
+      background: linear-gradient(135deg, #059669, #10b981);
+      border-color: #34d399;
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.5);
     }
 
     /* Google Maps-Style Search Result Pop-Up Bottom Sheet Card */
@@ -1452,60 +1446,47 @@
       line-height: 1.35;
     }
 
-    /* Cardinal Direction Controls (North-East-West-South) */
-    .map-cardinal-controls {
-      position: absolute;
-      top: 80px;
-      left: 12px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: rgba(15, 23, 42, 0.90);
-      backdrop-filter: blur(6px);
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 4px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-    }
-    .cardinal-mid-row {
+    /* 3-Dots Dropdown Menu */
+    .three-dots-item-btn {
+      width: 100%;
       display: flex;
       align-items: center;
-      gap: 2px;
-    }
-    .cardinal-btn {
-      width: 26px;
-      height: 24px;
-      background: #1e293b;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      font-size: 0.68rem;
-      font-weight: 800;
-      border-radius: 5px;
+      gap: 10px;
+      padding: 9px 14px;
+      background: none;
+      border: none;
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s ease;
+      box-sizing: border-box;
+      transition: background 0.15s ease, color 0.15s ease;
     }
-    .cardinal-btn:hover {
-      background: #0284c7;
+    .three-dots-item-btn:hover {
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    /* Point & Crossing Map Marker Badge */
+    .pt-crossing-map-badge {
+      background: rgba(15, 23, 42, 0.94);
+      border: 1.5px solid #0284c7;
+      border-radius: 6px;
+      padding: 2px 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.85);
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .pt-crossing-map-badge:hover {
+      transform: scale(1.1);
       border-color: #38bdf8;
-      color: #fff;
-    }
-    .cardinal-btn.cardinal-n {
-      color: #ef4444;
-      font-weight: 900;
-    }
-    .cardinal-center-compass {
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      color: #ef4444;
-      transition: transform 0.2s ease;
+      background: #0f172a;
     }
 
     /* Google Map Double Confirmation Modal */
@@ -1575,7 +1556,6 @@
   <header class="master-toolbar">
     <div class="toolbar-brand">
       <span>🚆 DFCCIL Workstation</span>
-      <span class="tag">GIS Map + Linear Diagram</span>
     </div>
 
     <!-- Quick Station Switcher Dropdown -->
@@ -1599,15 +1579,27 @@
 
     <!-- View Modes & Actions -->
     <div class="toolbar-group">
-      <button class="btn-tool" id="btnLiveLocationToggle" onclick="toggleLiveLocation()" title="Toggle Real-time GPS Live Location">🎯 Live GPS</button>
-      <a href="/download/camera-apk" download="DFCGPSMapCamera.apk" class="btn-tool" style="background:#7c3aed; color:#fff; font-weight:700;" title="Download Standalone DFC GPS Map Camera Android APK with Nearest OHE Pole Stamping">📷 GPS Camera APK</a>
-      <button class="btn-tool active" id="btnViewSplit" onclick="setViewMode('split')" title="Split View (Map + Linear)">🔀 Split (50/50)</button>
-      <button class="btn-tool" id="btnViewMap" onclick="setViewMode('map')" title="Full Map View">🗺️ Full Map</button>
-      <button class="btn-tool" id="btnViewLinear" onclick="setViewMode('linear')" title="Full Diagram View">📏 Full Diagram</button>
-      <button class="btn-tool" onclick="openStationEsp(currentStationCode || 'SMUN')" style="background:#0284c7; color:#fff; font-weight:700;" title="Open Official High-Definition Keyplans">⚡ Keyplans (HD)</button>
-      <button class="btn-tool" onclick="openDrawingsModal()" style="background:#0f766e; color:#fff; font-weight:700;" title="Browse all 249 Plan & Profile Drawings">📜 P&P Drawings (249)</button>
-      <button class="btn-tool" id="btnToggleSidebar" onclick="toggleSidebar()" title="Toggle KM Inspector Sidebar">📋 Inspector</button>
+      <button class="btn-tool" id="btnSingleViewToggle" onclick="toggleGpsDiagramView()" title="Switch between Map & Diagram">📏 Diagram</button>
       <a href="/" class="btn-tool" style="background:#334155; color:#fff;">🏠 Portal</a>
+
+      <!-- 3-Dots More Options Dropdown (Keyplans, P&P Drawings, Camera APK, Inspector) -->
+      <div class="toolbar-dropdown-wrap" style="position:relative; display:inline-block;">
+        <button class="btn-tool" id="btnThreeDotsMenu" onclick="toggleThreeDotsMenu(event)" title="More Tools & Drawings" style="padding:2px 10px; font-size:1.15rem; line-height:1; font-weight:800; cursor:pointer;">⋮</button>
+        <div class="three-dots-dropdown-menu" id="threeDotsDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#0b1120; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.85); min-width:215px; z-index:9999; padding:6px 0;">
+          <button class="three-dots-item-btn" onclick="openStationEsp(currentStationCode || 'SMUN'); closeThreeDotsMenu();">
+            <span>⚡</span> <span>Keyplans (HD)</span>
+          </button>
+          <button class="three-dots-item-btn" onclick="openDrawingsModal(); closeThreeDotsMenu();">
+            <span>📜</span> <span>P&P Drawings (249)</span>
+          </button>
+          <a href="/download/camera-apk" download="DFCGPSMapCamera.apk" onclick="closeThreeDotsMenu();" class="three-dots-item-btn" style="text-decoration:none;">
+            <span>📷</span> <span>GPS Camera APK</span>
+          </a>
+          <button class="three-dots-item-btn" id="btnToggleSidebar" onclick="toggleSidebar(); closeThreeDotsMenu();">
+            <span>📋</span> <span>KM Inspector</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -1619,18 +1611,6 @@
       <div class="pane-map" id="mapPane" style="position: relative;">
         <!-- High-Precision GIS Satellite Track Layer with KM Milestones & Stations -->
         <div id="mapView" style="width: 100%; height: 100%; display: block;"></div>
-
-        <!-- Top Right Map Action Controls -->
-        <div style="position: absolute; top: 8px; right: 12px; z-index: 1000; display: flex; align-items: center; gap: 8px;">
-          <button
-            class="btn-tool"
-            onclick="fitAllMapBounds()"
-            style="background: rgba(15, 23, 42, 0.92); color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; font-size: 11px; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5);"
-            title="Fit Entire 88.68 Km Corridor"
-          >
-            <span>↔ Fit Entire Track</span>
-          </button>
-        </div>
 
         <!-- Floating Google Maps-Style Omni-Search Bar on Map -->
         <div id="mapFloatingSearchWrap" class="gmaps-search-bar-wrap">
@@ -1653,7 +1633,7 @@
           <div id="omniDropdownMap" class="omni-search-dropdown" style="display:none;"></div>
         </div>
 
-        <!-- Floating Mobile/Desktop Action Controls (Day/Night GPS⇄Diagram Switcher, Camera, Compass) -->
+        <!-- Floating Mobile/Desktop Action Controls (GPS⇄Diagram Switcher, Camera, Satellite Layer, Tap to Live Location) -->
         <div class="floating-map-actions-stack">
           <!-- 1. Day/Night Style GPS ⇄ Diagram View Switcher -->
           <button id="btnFloatingViewToggle" class="floating-action-btn view-toggle-btn" onclick="toggleGpsDiagramView()" title="Switch between GPS Map & Linear Diagram">
@@ -1667,20 +1647,43 @@
             <span class="toggle-label">Camera</span>
           </button>
 
-          <!-- 2. Satellite ⇄ Normal Layer Switcher Button (Point 5) -->
+          <!-- 3. Satellite ⇄ Normal Layer Switcher Button -->
           <button id="btnToggleMapLayer" class="floating-action-btn layer-toggle-btn" onclick="toggleSatelliteLayer()" title="Switch Satellite / Normal Map">
             <span id="layerToggleIcon" class="btn-icon">🛰️</span>
             <span id="layerToggleLabel" class="toggle-label">Satellite</span>
           </button>
 
-          <!-- 4. Fit All Track Button -->
-          <button class="floating-action-btn fit-btn" onclick="fitAllMapBounds()" title="Fit Entire 88.68 Km Corridor">
-            <span class="btn-icon">↔</span>
+          <!-- 4. Tap to Live Location Button (Google Maps Style) -->
+          <button id="btnFloatingMyLocation" class="floating-action-btn my-location-btn" onclick="onTapMyLocation()" title="Your Live GPS Location (Google Maps Style)">
+            <span id="floatingLocationIcon" class="btn-icon">🎯</span>
+            <span id="floatingLocationLabel" class="toggle-label">Location</span>
           </button>
         </div>
 
-        <!-- Direction Controls (North-East-West-South) -->
-        </div>
+        <!-- Live Speedometer HUD (Bottom Left of Map) - Hidden until speed > 3 km/h like Google Maps -->
+        <div id="liveSpeedometerHud" class="live-speedometer-hud" style="display:none;">
+          <div class="speedo-header">
+            <div class="speedo-gps-indicator">
+              <span class="pulse-dot standby" id="speedoPulseDot"></span>
+              <span id="speedoGpsText">GPS STANDBY</span>
+            </div>
+            <button class="speedo-min-btn" onclick="toggleSpeedometerMinimize()" title="Minimize / Expand Speedometer">─</button>
+          </div>
+          <div class="speedo-body" id="speedoBody">
+            <div class="speedo-gauge-wrap">
+              <svg class="speedo-gauge-svg" viewBox="0 0 120 70">
+                <path d="M 15 65 A 45 45 0 0 1 105 65" fill="none" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
+                <path d="M 15 65 A 45 45 0 0 1 60 20" fill="none" stroke="#22c55e" stroke-width="8" stroke-dasharray="70 200" stroke-linecap="round"/>
+                <path d="M 60 20 A 45 45 0 0 1 95 35" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="40 200" stroke-linecap="round"/>
+                <path d="M 95 35 A 45 45 0 0 1 105 65" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="20 200" stroke-linecap="round"/>
+                <line id="speedoNeedle" x1="60" y1="65" x2="60" y2="25" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" style="transform-origin: 60px 65px; transform: rotate(-90deg); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"/>
+                <circle cx="60" cy="65" r="5.5" fill="#38bdf8"/>
+              </svg>
+              <div class="speedo-digital">
+                <span id="speedoValue" class="speedo-num">00.0</span>
+                <span class="speedo-unit">KM/H</span>
+              </div>
+            </div>
             <div class="speedo-telemetry">
               <div id="speedoKmText" style="font-weight:700; color:#38bdf8;">KM 1170.435</div>
               <div id="speedoOheText" style="color:#f87171; font-weight:700;">⚡ Pole 1170/01</div>
@@ -2387,20 +2390,6 @@ function initMap() {
     maxZoom: 20,
     attribution: '© OpenStreetMap contributors'
   });
-  const mapplsApiKey = 'nmmgncgrfhcjwmmgoiwpnardqkboovjxtkbx';
-  const mapplsMap = L.tileLayer('https://tile.mappls.com/map/raster_tile/still_map/{z}/{x}/{y}.png?access_token=' + mapplsApiKey, {
-    maxZoom: 19,
-    minZoom: 4,
-    attribution: '© <a href="https://www.mappls.com" target="_blank" style="color:#0284c7;font-weight:600;">Mappls MapmyIndia</a>'
-  });
-  // Graceful fallback to CARTO Voyager if Mappls domain whitelisting is not yet added on localhost
-  mapplsMap.on('tileerror', function(error) {
-    if (error && error.tile && !error.tile.dataset.hasFallback) {
-      error.tile.dataset.hasFallback = 'true';
-      const c = error.coords;
-      error.tile.src = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/' + c.z + '/' + c.x + '/' + c.y + '.png';
-    }
-  });
   const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 20,
     maxNativeZoom: 18,
@@ -2964,6 +2953,68 @@ function initMap() {
   }
   oheGroup.addTo(map);
 
+  // Points & Crossings Layer (Main Line Only - 41 turnouts plotted according to SRJ Chainage)
+  const pointsGroup = L.layerGroup();
+  const allPtsList = DB_DATA.points_and_crossings || [];
+  const mainLinePts = allPtsList.filter(p => p.line === 'Main Line' && p.srj_chainage > 1000);
+
+  mainLinePts.forEach(p => {
+    const chainage = parseFloat(p.srj_chainage);
+    if (isNaN(chainage)) return;
+
+    const gps = getInterpolatedGps(chainage);
+    if (!gps || !gps.lat || !gps.lon) return;
+
+    const isLh = (p.turnout || '').toUpperCase() === 'LH';
+    const angleText = p.angle || '1/12';
+    const ptBadgeHtml = `
+      <div class="pt-crossing-map-badge" title="Point ${p.point_no} (${p.station}) KM ${chainage.toFixed(3)}">
+        <span style="font-size:11px;">🔀</span>
+        <span style="font-weight:800; color:#38bdf8; font-size:9.5px; font-family:'JetBrains Mono',monospace;">${p.point_no}</span>
+      </div>
+    `;
+
+    const ptIcon = L.divIcon({
+      className: 'pt-crossing-div-icon',
+      html: ptBadgeHtml,
+      iconSize: [64, 22],
+      iconAnchor: [32, 11]
+    });
+
+    const marker = L.marker([gps.lat, gps.lon], { icon: ptIcon, zIndexOffset: 2200 });
+
+    const popupHtml = `
+      <div style="font-family:system-ui,-apple-system,sans-serif; min-width:220px; color:#f8fafc; padding:4px;">
+        <div style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+          <b style="color:#38bdf8; font-size:13px;">🔀 Point ${p.point_no} (${p.station})</b>
+          <span style="background:#0284c7; color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px;">Main Line</span>
+        </div>
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.5;">
+          <b>SRJ Chainage:</b> <span style="color:#38bdf8; font-weight:700; font-family:monospace;">KM ${chainage.toFixed(3)}</span><br>
+          <b>Station:</b> <span style="color:#f8fafc; font-weight:600;">${p.station}</span><br>
+          <b>Angle / Crossing:</b> <span style="color:#10b981; font-weight:700;">${angleText}</span><br>
+          <b>Turnout Type:</b> <span style="color:#fbbf24; font-weight:700;">${isLh ? 'Left Hand (LH)' : 'Right Hand (RH)'}</span><br>
+          <b>Laid On:</b> ${p.laid_on || 'Straight'}<br>
+          <b>Traffic:</b> ${p.traffic || '--'}<br>
+          <b>Stations Behind:</b> ${p.stations_behind || '--'}
+        </div>
+        <div style="margin-top:8px;">
+          <button onclick="navigateToKm(${chainage}, true, false)" style="width:100%; background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:4px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer;">
+            ⚡ Focus in Linear Diagram ➔
+          </button>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupHtml);
+    marker.on('click', () => {
+      navigateToKm(chainage, true, false);
+    });
+
+    pointsGroup.addLayer(marker);
+  });
+  pointsGroup.addTo(map);
+
   // Synchronized Train Pin Marker
   const trainPinIcon = L.divIcon({
     className: '',
@@ -2976,10 +3027,9 @@ function initMap() {
     zIndexOffset: 1500
   }).addTo(map);
 
-  // Layer Controls: Street Map (default), Mappls, Esri, Google Maps
+  // Layer Controls: Street Map (default), Esri, Google Maps
   const baseMaps = { 
     "Street Map (OpenStreetMap)": osm,
-    "Mappls Map (MapmyIndia)": mapplsMap,
     "Esri Satellite": esriSatellite, 
     "Google Satellite (HD)": googleHybrid
   };
@@ -2996,6 +3046,7 @@ function initMap() {
   });
   const overlays = { 
     "Main Track (Blue Line)": trackPolyline, 
+    "🔀 Points & Crossings (Main Line)": pointsGroup,
     "⚡ OHE Masts (1,663)": oheGroup,
     "Curves / वक्र": curveGroup,
     "Main Line Bridges": bridgeGroup, 
@@ -4691,6 +4742,17 @@ function setViewMode(mode) {
   if (btnMap) btnMap.classList.toggle('active', mode === 'map');
   if (btnLinear) btnLinear.classList.toggle('active', mode === 'linear');
 
+  const singleToggle = document.getElementById('btnSingleViewToggle');
+  if (singleToggle) {
+    if (mode === 'map') {
+      singleToggle.innerHTML = '📏 Diagram';
+      singleToggle.setAttribute('title', 'Switch to Linear Diagram View');
+    } else {
+      singleToggle.innerHTML = '🗺️ Map';
+      singleToggle.setAttribute('title', 'Switch to GPS Map View');
+    }
+  }
+
   const floatIcon = document.getElementById('floatingToggleIcon');
   const floatLabel = document.getElementById('floatingToggleLabel');
   const floatBtn = document.getElementById('btnFloatingViewToggle');
@@ -5541,6 +5603,9 @@ let pendingGmapLayer = null;
 
 function toggleLiveLocation() {
   const btn = document.getElementById('btnLiveLocationToggle');
+  const locBtn = document.getElementById('btnFloatingMyLocation');
+  const locLbl = document.getElementById('floatingLocationLabel');
+
   if (liveWatchId !== null) {
     // Turn OFF
     navigator.geolocation.clearWatch(liveWatchId);
@@ -5552,6 +5617,9 @@ function toggleLiveLocation() {
       btn.style.background = '';
       btn.innerHTML = '🎯 Live GPS';
     }
+    if (locBtn) locBtn.classList.remove('active');
+    if (locLbl) locLbl.textContent = 'Location';
+
     const pulseDot = document.getElementById('speedoPulseDot');
     if (pulseDot) pulseDot.className = 'pulse-dot standby';
     const gpsTxt = document.getElementById('speedoGpsText');
@@ -5569,6 +5637,9 @@ function toggleLiveLocation() {
     btn.style.background = '#0284c7';
     btn.innerHTML = '🎯 GPS Tracking...';
   }
+  if (locBtn) locBtn.classList.add('active');
+  if (locLbl) locLbl.textContent = 'Tracking...';
+
   const pulseDot = document.getElementById('speedoPulseDot');
   if (pulseDot) pulseDot.className = 'pulse-dot';
   const gpsTxt = document.getElementById('speedoGpsText');
@@ -5580,6 +5651,41 @@ function toggleLiveLocation() {
     { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 }
   );
 }
+
+// Google Maps-Style Tap to Live Location Handler
+function onTapMyLocation() {
+  if (liveWatchId !== null && lastGpsPos && map) {
+    // Already tracking: Smoothly pan and center on user with zoom 17 like Google Maps
+    map.setView([lastGpsPos.lat, lastGpsPos.lon], 17, { animate: true });
+    if (liveUserMarker && liveUserMarker.openPopup) {
+      liveUserMarker.openPopup();
+    }
+  } else {
+    // Start tracking
+    toggleLiveLocation();
+  }
+}
+
+// 3-Dots More Options Menu Handlers
+function toggleThreeDotsMenu(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('threeDotsDropdown');
+  if (dd) {
+    dd.style.display = (dd.style.display === 'block') ? 'none' : 'block';
+  }
+}
+
+function closeThreeDotsMenu() {
+  const dd = document.getElementById('threeDotsDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.toolbar-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    closeThreeDotsMenu();
+  }
+});
 
 function onLivePositionUpdate(pos) {
   const lat = pos.coords.latitude;
@@ -5634,7 +5740,11 @@ function onLivePositionUpdate(pos) {
     }
   }
 
-  // Update Top Toolbar Button
+  // Update Floating Location Label to 'Active'
+  const locLbl = document.getElementById('floatingLocationLabel');
+  if (locLbl) locLbl.textContent = 'Active';
+
+  // Update Top Toolbar Button if exists
   const btn = document.getElementById('btnLiveLocationToggle');
   if (btn) btn.innerHTML = `🎯 Live (KM ${proj.km.toFixed(2)})`;
 }
@@ -5692,32 +5802,6 @@ function toggleSpeedometerMinimize() {
   if (hud) {
     hud.classList.toggle('minimized');
   }
-}
-
-// Direction change controls (North-East-West-South)
-function changeMapDirection(dir) {
-  if (!map) return;
-  const center = map.getCenter();
-  const step = 0.035; // ~3.8 km pan
-  if (dir === 'N') {
-    map.panTo([center.lat + step, center.lng], { animate: true, duration: 0.4 });
-  } else if (dir === 'S') {
-    map.panTo([center.lat - step, center.lng], { animate: true, duration: 0.4 });
-  } else if (dir === 'E') {
-    map.panTo([center.lat, center.lng + step], { animate: true, duration: 0.4 });
-  } else if (dir === 'W') {
-    map.panTo([center.lat, center.lng - step], { animate: true, duration: 0.4 });
-  }
-}
-
-// Compass heading listener
-if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', function(e) {
-    const needle = document.getElementById('cardinalCompassNeedle');
-    if (needle && typeof e.alpha === 'number') {
-      needle.style.transform = `rotate(${360 - e.alpha}deg)`;
-    }
-  }, false);
 }
 
 // Nearest OHE pole helper
@@ -6044,7 +6128,6 @@ function toggleSatelliteLayer() {
   
   if (isSatelliteActive) {
     if (typeof osm !== 'undefined' && map.hasLayer(osm)) map.removeLayer(osm);
-    if (typeof mapplsMap !== 'undefined' && map.hasLayer(mapplsMap)) map.removeLayer(mapplsMap);
     if (typeof googleHybrid !== 'undefined' && !map.hasLayer(googleHybrid)) {
       googleHybrid.addTo(map);
     } else if (typeof esriSatellite !== 'undefined' && !map.hasLayer(esriSatellite)) {
@@ -6248,7 +6331,7 @@ window.onAndroidBackButton = function() {
     </div>
     <div class="gmap-confirm-body" style="font-size:0.84rem; color:#cbd5e1; line-height:1.55; margin:14px 0;">
       You are switching the base layer to <b>Google Satellite (HD)</b>.<br>
-      To continue using free GIS without Google Maps API, stay on <b>Street Map (OSM)</b> or <b>Mappls (MapmyIndia)</b>.<br><br>
+      To continue using free GIS without Google Maps API, stay on <b>Street Map (OSM)</b> or <b>Esri Satellite</b>.<br><br>
       <span style="color:#f8fafc; font-weight:700;">Do you want to proceed to Google Maps?</span>
     </div>
     <div class="gmap-confirm-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
