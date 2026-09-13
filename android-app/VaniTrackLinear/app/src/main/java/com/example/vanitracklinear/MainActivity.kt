@@ -84,6 +84,15 @@ class MainActivity : ComponentActivity() {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             settings.mediaPlaybackRequiresUserGesture = false
+
+            setDownloadListener { url, _, _, _, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Download handler error: " + e.message, Toast.LENGTH_SHORT).show()
+                }
+            }
             
             // Expose native Android methods to Web App
             addJavascriptInterface(WebAppInterface(this@MainActivity), "AndroidNative")

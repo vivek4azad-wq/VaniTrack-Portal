@@ -1773,6 +1773,9 @@
           <button class="three-dots-item-btn" onclick="openDistanceCalcModal(); closeThreeDotsMenu();">
             <span>📐</span> <span>Distance Calculator</span>
           </button>
+          <button class="three-dots-item-btn" onclick="openOfflineMapModal(); closeThreeDotsMenu();">
+            <span>📥</span> <span>Download Offline Map</span>
+          </button>
           <a href="/download/camera-apk" download="DFCGPSMapCamera.apk" onclick="closeThreeDotsMenu();" class="three-dots-item-btn" style="text-decoration:none;">
             <span>📷</span> <span>GPS Camera APK</span>
           </a>
@@ -2304,6 +2307,187 @@
   </div>
 </div>
 
+<!-- Offline Route Map Downloader Modal -->
+<div class="modal-backdrop" id="offlineMapModal" onclick="if(event.target===this) closeOfflineMapModal()">
+  <div class="modal-dialog" style="max-width: 680px; height: auto; max-height: 90vh;">
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.35rem;">📥</span>
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:#38bdf8; margin:0;">Offline Route Map Downloader</h3>
+          <p style="font-size:0.72rem; color:#94a3b8; margin:2px 0 0 0;">Download local route map &amp; satellite tiles for 100% offline field inspection</p>
+        </div>
+      </div>
+      <button class="modal-close-btn" onclick="closeOfflineMapModal()">✕</button>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div style="display:flex; background:#0f172a; border-bottom:1px solid var(--border-color); padding:4px 8px; gap:6px;">
+      <button id="tabBtnOfflineDownload" class="dist-tab-btn active" onclick="switchOfflineMapTab('download')">
+        <span>💾 Download Route Tiles</span>
+      </button>
+      <button id="tabBtnOfflineExport" class="dist-tab-btn" onclick="switchOfflineMapTab('export')">
+        <span>🗺️ Export Route Map</span>
+      </button>
+      <button id="tabBtnOfflineStorage" class="dist-tab-btn" onclick="switchOfflineMapTab('storage')">
+        <span>📦 Saved Sections (<span id="offlineSavedCount">0</span>)</span>
+      </button>
+    </div>
+
+    <div class="modal-body" style="overflow-y:auto; padding:1.1rem; display:flex; flex-direction:column; gap:1rem;">
+      <!-- TAB 1: DOWNLOAD ROUTE TILES -->
+      <div id="panelOfflineDownload" style="display:block;">
+        <div style="background:#090d16; border:1px solid #1e293b; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+          <!-- 1. Select Section -->
+          <div>
+            <label style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; display:block; margin-bottom:6px;">
+              📍 Select Route / Station Section
+            </label>
+            <select id="offlineSectionSelect" onchange="onOfflineSectionChange()" style="width:100%; padding:9px 12px; background:#0b1222; border:1.5px solid #334155; color:#f8fafc; border-radius:8px; font-size:13px; font-weight:600;">
+              <option value="SMUN_SBJN" data-start="1170.435" data-end="1188.575">🏢 SMUN ⇄ SBJN (KM 1170.435 – 1188.575 • 18.1 km)</option>
+              <option value="SBJN_NSIR" data-start="1188.575" data-end="1202.015">🏢 SBJN ⇄ NSIR (KM 1188.575 – 1202.015 • 13.4 km)</option>
+              <option value="NSIR_GVGN" data-start="1202.015" data-end="1213.187">🏢 NSIR ⇄ GVGN (KM 1202.015 – 1213.187 • 11.2 km)</option>
+              <option value="GVGN_KNNN" data-start="1213.187" data-end="1229.087">🏢 GVGN ⇄ KNNN (KM 1213.187 – 1229.087 • 15.9 km)</option>
+              <option value="KNNN_CHAN" data-start="1229.087" data-end="1237.576">🏢 KNNN ⇄ CHAN (KM 1229.087 – 1237.576 • 8.5 km)</option>
+              <option value="CHAN_SNL" data-start="1237.576" data-end="1249.700">🏢 CHAN ⇄ SNL (KM 1237.576 – 1249.700 • 12.1 km)</option>
+              <option value="SMUN_RPJ" data-start="1173.000" data-end="1178.150" data-link="true">⚡ SMUN ⇄ RPJ Link Line (KM 1173.000 – 1178.150 • 5.1 km)</option>
+              <option value="FULL_CORRIDOR" data-start="1167.200" data-end="1250.000">🚆 Entire DFC Corridor (KM 1167.200 – 1250.000 • 82.8 km)</option>
+              <option value="CUSTOM" data-start="" data-end="">✏️ Custom KM Range (Manual Start / End)</option>
+            </select>
+          </div>
+
+          <!-- Custom KM Inputs (hidden unless CUSTOM chosen) -->
+          <div id="offlineCustomKmRow" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Start KM</label>
+              <input type="number" step="0.1" id="offlineCustomStartKm" value="1170.0" oninput="estimateOfflineDownloadSize()" style="width:100%; box-sizing:border-box; padding:7px 10px; background:#040711; border:1px solid #475569; color:#fff; border-radius:6px; font-size:12px; font-weight:bold;">
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">End KM</label>
+              <input type="number" step="0.1" id="offlineCustomEndKm" value="1185.0" oninput="estimateOfflineDownloadSize()" style="width:100%; box-sizing:border-box; padding:7px 10px; background:#040711; border:1px solid #475569; color:#fff; border-radius:6px; font-size:12px; font-weight:bold;">
+            </div>
+          </div>
+
+          <!-- 2. Map Layer & Detail Options -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; display:block; margin-bottom:6px;">
+                🗺️ Map Layer Type
+              </label>
+              <select id="offlineLayerSelect" onchange="estimateOfflineDownloadSize()" style="width:100%; padding:8px 10px; background:#0b1222; border:1px solid #334155; color:#cbd5e1; border-radius:6px; font-size:12px; font-weight:600;">
+                <option value="street">Street Map (OSM - Fast &amp; Crisp)</option>
+                <option value="satellite">Satellite View (Esri High-Res)</option>
+                <option value="both">Both (Street Map + Satellite)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; display:block; margin-bottom:6px;">
+                🔍 Zoom Detail Level
+              </label>
+              <select id="offlineZoomSelect" onchange="estimateOfflineDownloadSize()" style="width:100%; padding:8px 10px; background:#0b1222; border:1px solid #334155; color:#cbd5e1; border-radius:6px; font-size:12px; font-weight:600;">
+                <option value="standard" selected>Standard (Zoom 13 to 15 • ~3 MB)</option>
+                <option value="high">High Detail (Zoom 13 to 16 • ~7 MB)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Estimated Metrics Box -->
+          <div id="offlineEstimateBox" style="background:#040711; border:1px dashed #334155; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+            <div>
+              <span style="color:#94a3b8;">Estimated Tiles:</span>
+              <strong id="offlineEstTiles" style="color:#38bdf8; margin-left:4px;">~120 tiles</strong>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Estimated Size:</span>
+              <strong id="offlineEstSize" style="color:#22c55e; margin-left:4px;">~3.2 MB</strong>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Est. Time:</span>
+              <strong id="offlineEstTime" style="color:#f59e0b; margin-left:4px;">~2-4 sec</strong>
+            </div>
+          </div>
+
+          <!-- Progress Bar Box (Hidden by default) -->
+          <div id="offlineProgressWrap" style="display:none; background:#040711; border:1px solid #0284c7; border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:6px;">
+              <span id="offlineProgressStatus" style="color:#38bdf8;">Downloading tiles...</span>
+              <span id="offlineProgressPercent" style="color:#f8fafc;">0%</span>
+            </div>
+            <div style="width:100%; height:10px; background:#1e293b; border-radius:5px; overflow:hidden;">
+              <div id="offlineProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #0284c7, #38bdf8); transition:width 0.15s ease;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+              <span id="offlineProgressCount" style="font-size:11px; color:#94a3b8;">0 / 0 tiles</span>
+              <button class="btn-tool" onclick="cancelOfflineDownload()" style="background:#ef4444; color:#fff; border-color:#dc2626; font-size:11px; padding:3px 10px;">✕ Cancel</button>
+            </div>
+          </div>
+
+          <!-- Start Download Action Button -->
+          <div style="display:flex; gap:10px; margin-top:4px;">
+            <button id="btnStartOfflineDownload" class="btn-tool" onclick="startOfflineDownload()" style="flex:1; justify-content:center; background:#0284c7; border-color:#38bdf8; color:#fff; font-size:13px; font-weight:800; padding:10px 16px; border-radius:8px; box-shadow:0 4px 16px rgba(2, 132, 199, 0.4);">
+              <span>📥 Download Local Map for Offline Use</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: EXPORT ROUTE MAP (IMAGE / PDF / GEOJSON) -->
+      <div id="panelOfflineExport" style="display:none;">
+        <div style="background:#090d16; border:1px solid #1e293b; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+          <p style="font-size:12px; color:#cbd5e1; margin:0; line-height:1.5;">
+            Export an offline high-resolution map snapshot or GIS data file of the selected section directly to your device storage:
+          </p>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <button class="btn-tool" onclick="exportRouteMapImage()" style="justify-content:flex-start; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px;">
+              <span style="font-size:1.4rem; margin-right:8px;">🖼️</span>
+              <div style="text-align:left;">
+                <div style="font-size:13px; font-weight:700; color:#f8fafc;">Export Route Map Graphic (PNG Image)</div>
+                <div style="font-size:11px; color:#94a3b8;">Schematic route overview with track polyline, chainage markers &amp; stations</div>
+              </div>
+            </button>
+            <button class="btn-tool" onclick="exportRouteGeoJson()" style="justify-content:flex-start; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px;">
+              <span style="font-size:1.4rem; margin-right:8px;">🗺️</span>
+              <div style="text-align:left;">
+                <div style="font-size:13px; font-weight:700; color:#38bdf8;">Export Route GIS Data (GeoJSON)</div>
+                <div style="font-size:11px; color:#94a3b8;">Compatible with Google Earth, OsmAnd, QGIS, and offline GIS viewers</div>
+              </div>
+            </button>
+            <button class="btn-tool" onclick="exportRouteCsvSummary()" style="justify-content:flex-start; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px;">
+              <span style="font-size:1.4rem; margin-right:8px;">📊</span>
+              <div style="text-align:left;">
+                <div style="font-size:13px; font-weight:700; color:#f59e0b;">Export Route Assets Inventory (CSV)</div>
+                <div style="font-size:11px; color:#94a3b8;">Full table of all OHE masts, bridges, level crossings, and points in the section</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: STORAGE MANAGER (SAVED SECTIONS) -->
+      <div id="panelOfflineStorage" style="display:none;">
+        <div style="background:#090d16; border:1px solid #1e293b; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:13px; font-weight:800; color:#f8fafc;">Saved Offline Map Sections</div>
+              <div id="offlineStorageTotalText" style="font-size:11px; color:#94a3b8;">Total storage: 0 tiles (0 MB)</div>
+            </div>
+            <button class="btn-tool" onclick="clearAllOfflineMaps()" style="background:#ef4444; color:#fff; border-color:#dc2626; font-size:11px; padding:5px 12px;">
+              🗑️ Clear All
+            </button>
+          </div>
+
+          <!-- List of Saved Sections -->
+          <div id="offlineSectionsList" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;">
+            <div style="text-align:center; padding:20px; color:#64748b; font-size:12px;">
+              No offline route sections saved yet. Download a section above to enable offline mapping.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Workstation Orchestrator Script -->
 <script>
 // Global State
@@ -2629,6 +2813,12 @@ function initMap() {
     setTimeout(initMap, 300);
     return;
   }
+  try {
+    setupOfflineTileInterceptor();
+  } catch(e) {
+    console.warn('setupOfflineTileInterceptor error:', e);
+  }
+
   streetMapLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 20,
     attribution: '© OpenStreetMap contributors'
@@ -7170,9 +7360,746 @@ function copyMeasurementDetails(type) {
 }
 
 // -------------------------------------------------------------
+// 8B. OFFLINE ROUTE MAP DOWNLOADER & INDEXEDDB TILE CACHE
+// -------------------------------------------------------------
+let offlineDbInstance = null;
+let isOfflineDownloading = false;
+let shouldCancelOfflineDownload = false;
+
+function lon2tile(lon, zoom) {
+  return Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+}
+function lat2tile(lat, zoom) {
+  const latRad = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
+}
+
+function getOfflineDB() {
+  if (offlineDbInstance) return Promise.resolve(offlineDbInstance);
+  return new Promise((resolve, reject) => {
+    try {
+      const req = indexedDB.open('DFCC_Offline_Maps', 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('tiles')) {
+          const tileStore = db.createObjectStore('tiles', { keyPath: 'key' });
+          tileStore.createIndex('sectionId', 'sectionId', { unique: false });
+          tileStore.createIndex('layer', 'layer', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('sections')) {
+          db.createObjectStore('sections', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = (e) => {
+        offlineDbInstance = e.target.result;
+        resolve(offlineDbInstance);
+      };
+      req.onerror = (e) => {
+        console.warn('IndexedDB offline map open error:', e);
+        reject(e);
+      };
+    } catch(err) {
+      reject(err);
+    }
+  });
+}
+
+function getOfflineTileBlob(key) {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('tiles', 'readonly');
+        const store = tx.objectStore('tiles');
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+        req.onerror = () => resolve(null);
+      } catch(e) {
+        resolve(null);
+      }
+    });
+  }).catch(() => null);
+}
+
+function putOfflineTile(key, blob, sectionId, layer, zoom) {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('tiles', 'readwrite');
+        const store = tx.objectStore('tiles');
+        store.put({ key, blob, sectionId, layer, zoom, date: Date.now() });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      } catch(e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+function saveSectionMetadata(secData) {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('sections', 'readwrite');
+        const store = tx.objectStore('sections');
+        store.put(secData);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      } catch(e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+function getAllSavedSections() {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('sections', 'readonly');
+        const store = tx.objectStore('sections');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch(e) {
+        resolve([]);
+      }
+    });
+  }).catch(() => []);
+}
+
+function deleteOfflineSection(id, sectionId) {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve, reject) => {
+      try {
+        const txSec = db.transaction('sections', 'readwrite');
+        txSec.objectStore('sections').delete(id);
+        txSec.oncomplete = () => {
+          try {
+            const txTiles = db.transaction('tiles', 'readwrite');
+            const tileStore = txTiles.objectStore('tiles');
+            const idx = tileStore.index('sectionId');
+            const req = idx.openCursor(IDBKeyRange.only(sectionId));
+            req.onsuccess = (e) => {
+              const cursor = e.target.result;
+              if (cursor) {
+                cursor.delete();
+                cursor.continue();
+              }
+            };
+            txTiles.oncomplete = () => resolve();
+            txTiles.onerror = () => resolve();
+          } catch(e) {
+            resolve();
+          }
+        };
+        txSec.onerror = () => reject(txSec.error);
+      } catch(e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+function clearAllOfflineData() {
+  return getOfflineDB().then(db => {
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(['tiles', 'sections'], 'readwrite');
+        tx.objectStore('tiles').clear();
+        tx.objectStore('sections').clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      } catch(e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+function setupOfflineTileInterceptor() {
+  if (typeof L === 'undefined' || !L.TileLayer) return;
+  if (L.TileLayer.prototype._hasOfflineInterceptor) return;
+  L.TileLayer.prototype._hasOfflineInterceptor = true;
+
+  const origCreateTile = L.TileLayer.prototype.createTile;
+  L.TileLayer.prototype.createTile = function(coords, done) {
+    const tile = origCreateTile.call(this, coords, done);
+    const isSatellite = (this === esriSatelliteLayer || (this._url && this._url.includes('arcgisonline')));
+    const layerKey = isSatellite ? 'satellite' : 'street';
+    const tileKey = `${layerKey}_${coords.z}_${coords.x}_${coords.y}`;
+
+    getOfflineTileBlob(tileKey).then(blob => {
+      if (blob) {
+        const blobUrl = URL.createObjectURL(blob);
+        tile.onload = function() {
+          URL.revokeObjectURL(blobUrl);
+          done(null, tile);
+        };
+        tile.onerror = function() {
+          URL.revokeObjectURL(blobUrl);
+          done(new Error('Offline tile error'), tile);
+        };
+        tile.src = blobUrl;
+      }
+    }).catch(() => {});
+
+    return tile;
+  };
+}
+
+function openOfflineMapModal() {
+  const modal = document.getElementById('offlineMapModal');
+  if (modal) {
+    modal.classList.add('open');
+    switchOfflineMapTab('download');
+    estimateOfflineDownloadSize();
+    refreshOfflineStorageList();
+  }
+}
+
+function closeOfflineMapModal() {
+  const modal = document.getElementById('offlineMapModal');
+  if (modal) modal.classList.remove('open');
+  if (isOfflineDownloading) {
+    cancelOfflineDownload();
+  }
+}
+
+function switchOfflineMapTab(tab) {
+  const pDown = document.getElementById('panelOfflineDownload');
+  const pExp = document.getElementById('panelOfflineExport');
+  const pStor = document.getElementById('panelOfflineStorage');
+  const tDown = document.getElementById('tabBtnOfflineDownload');
+  const tExp = document.getElementById('tabBtnOfflineExport');
+  const tStor = document.getElementById('tabBtnOfflineStorage');
+
+  if (pDown) pDown.style.display = tab === 'download' ? 'block' : 'none';
+  if (pExp) pExp.style.display = tab === 'export' ? 'block' : 'none';
+  if (pStor) pStor.style.display = tab === 'storage' ? 'block' : 'none';
+
+  if (tDown) tDown.classList.toggle('active', tab === 'download');
+  if (tExp) tExp.classList.toggle('active', tab === 'export');
+  if (tStor) tStor.classList.toggle('active', tab === 'storage');
+
+  if (tab === 'storage') {
+    refreshOfflineStorageList();
+  }
+}
+
+function onOfflineSectionChange() {
+  const secSelect = document.getElementById('offlineSectionSelect');
+  const isCustom = secSelect.value === 'CUSTOM';
+  const customRow = document.getElementById('offlineCustomKmRow');
+  if (customRow) customRow.style.display = isCustom ? 'grid' : 'none';
+  estimateOfflineDownloadSize();
+}
+
+function getSelectedSectionRange() {
+  const secSelect = document.getElementById('offlineSectionSelect');
+  if (!secSelect) return { secId: 'SMUN_SBJN', name: 'SMUN-SBJN', startKm: 1170.435, endKm: 1188.575, isLink: false };
+  const opt = secSelect.options[secSelect.selectedIndex];
+  const secId = secSelect.value;
+  let startKm = 1170.435, endKm = 1188.575, isLink = false;
+
+  if (secId === 'CUSTOM') {
+    startKm = parseFloat(document.getElementById('offlineCustomStartKm').value) || 1170.0;
+    endKm = parseFloat(document.getElementById('offlineCustomEndKm').value) || 1185.0;
+  } else {
+    startKm = parseFloat(opt.getAttribute('data-start')) || 1170.435;
+    endKm = parseFloat(opt.getAttribute('data-end')) || 1188.575;
+    isLink = opt.getAttribute('data-link') === 'true';
+  }
+  return { secId, name: opt.textContent.trim(), startKm, endKm, isLink };
+}
+
+function getRouteCoordinates(startKm, endKm, isLink = false) {
+  if (isLink && typeof LINK_LINE_WAYPOINTS !== 'undefined' && LINK_LINE_WAYPOINTS.length) {
+    return LINK_LINE_WAYPOINTS.filter(p => p.km >= startKm && p.km <= endKm).map(p => ({ lat: p.lat, lon: p.lon }));
+  }
+  if (typeof parsedTrackCoords !== 'undefined' && parsedTrackCoords.length) {
+    return parsedTrackCoords.filter(p => p.km >= startKm && p.km <= endKm).map(p => ({ lat: p.lat, lon: p.lon }));
+  }
+  return [];
+}
+
+function computeTilesForRoute(coords, minZoom, maxZoom) {
+  const tileSet = new Map();
+  if (!coords.length) return [];
+
+  coords.forEach(pt => {
+    for (let z = minZoom; z <= maxZoom; z++) {
+      const tx = lon2tile(pt.lon, z);
+      const ty = lat2tile(pt.lat, z);
+
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const key = `${z}_${tx + dx}_${ty + dy}`;
+          if (!tileSet.has(key)) {
+            tileSet.set(key, { z, x: tx + dx, y: ty + dy });
+          }
+        }
+      }
+    }
+  });
+
+  return Array.from(tileSet.values());
+}
+
+function estimateOfflineDownloadSize() {
+  const range = getSelectedSectionRange();
+  const coords = getRouteCoordinates(range.startKm, range.endKm, range.isLink);
+  const zoomChoice = document.getElementById('offlineZoomSelect') ? document.getElementById('offlineZoomSelect').value : 'standard';
+  const layerChoice = document.getElementById('offlineLayerSelect') ? document.getElementById('offlineLayerSelect').value : 'street';
+
+  const minZoom = 13;
+  const maxZoom = zoomChoice === 'high' ? 16 : 15;
+  const tiles = computeTilesForRoute(coords, minZoom, maxZoom);
+  const layerCount = layerChoice === 'both' ? 2 : 1;
+  const totalTiles = tiles.length * layerCount;
+  const estMb = (totalTiles * 0.024).toFixed(1);
+  const estSec = Math.max(1, Math.round(totalTiles / 35));
+
+  const elTiles = document.getElementById('offlineEstTiles');
+  const elSize = document.getElementById('offlineEstSize');
+  const elTime = document.getElementById('offlineEstTime');
+
+  if (elTiles) elTiles.textContent = `~${totalTiles} tiles`;
+  if (elSize) elSize.textContent = `~${estMb} MB`;
+  if (elTime) elTime.textContent = `~${estSec}-${estSec + 3} sec`;
+}
+
+async function startOfflineDownload() {
+  const range = getSelectedSectionRange();
+  if (range.startKm >= range.endKm) {
+    alert('Please enter a valid Start and End KM range.');
+    return;
+  }
+
+  const layerChoice = document.getElementById('offlineLayerSelect').value;
+  const zoomChoice = document.getElementById('offlineZoomSelect').value;
+  const minZoom = 13;
+  const maxZoom = zoomChoice === 'high' ? 16 : 15;
+
+  const coords = getRouteCoordinates(range.startKm, range.endKm, range.isLink);
+  if (!coords.length) {
+    alert('No track coordinates found for the selected section.');
+    return;
+  }
+
+  const tiles = computeTilesForRoute(coords, minZoom, maxZoom);
+  if (!tiles.length) {
+    alert('No tiles calculated.');
+    return;
+  }
+
+  const layersToDownload = [];
+  if (layerChoice === 'street' || layerChoice === 'both') {
+    layersToDownload.push({
+      key: 'street',
+      urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    });
+  }
+  if (layerChoice === 'satellite' || layerChoice === 'both') {
+    layersToDownload.push({
+      key: 'satellite',
+      urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    });
+  }
+
+  const totalTilesToDownload = tiles.length * layersToDownload.length;
+  isOfflineDownloading = true;
+  shouldCancelOfflineDownload = false;
+
+  const progWrap = document.getElementById('offlineProgressWrap');
+  const progBar = document.getElementById('offlineProgressBar');
+  const progPercent = document.getElementById('offlineProgressPercent');
+  const progCount = document.getElementById('offlineProgressCount');
+  const progStatus = document.getElementById('offlineProgressStatus');
+  const btnStart = document.getElementById('btnStartOfflineDownload');
+
+  if (progWrap) progWrap.style.display = 'block';
+  if (btnStart) { btnStart.disabled = true; btnStart.style.opacity = '0.5'; }
+
+  let completed = 0;
+  let totalBytes = 0;
+
+  const queue = [];
+  layersToDownload.forEach(l => {
+    tiles.forEach(t => {
+      queue.push({ ...t, layerKey: l.key, urlTemplate: l.urlTemplate });
+    });
+  });
+
+  const CONCURRENCY = 4;
+  let queueIndex = 0;
+
+  async function worker() {
+    while (queueIndex < queue.length && !shouldCancelOfflineDownload) {
+      const item = queue[queueIndex++];
+      const subdomains = ['a', 'b', 'c'];
+      const s = subdomains[Math.abs(item.x + item.y) % 3];
+      const url = item.urlTemplate
+        .replace('{s}', s)
+        .replace('{z}', item.z)
+        .replace('{x}', item.x)
+        .replace('{y}', item.y);
+
+      const tileKey = `${item.layerKey}_${item.z}_${item.x}_${item.y}`;
+
+      try {
+        const resp = await fetch(url, { mode: 'cors' });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          totalBytes += blob.size;
+          await putOfflineTile(tileKey, blob, range.secId, item.layerKey, item.z);
+        }
+      } catch(err) {
+        // Continue if single tile fails
+      }
+
+      completed++;
+      const percent = Math.round((completed / totalTilesToDownload) * 100);
+      if (progBar) progBar.style.width = percent + '%';
+      if (progPercent) progPercent.textContent = percent + '%';
+      if (progCount) progCount.textContent = `${completed} / ${totalTilesToDownload} tiles (${(totalBytes / (1024*1024)).toFixed(1)} MB)`;
+      if (progStatus) progStatus.textContent = `Downloading ${item.layerKey === 'satellite' ? 'Satellite' : 'Street'} tile (Zoom ${item.z})...`;
+    }
+  }
+
+  const workers = [];
+  for (let i = 0; i < CONCURRENCY; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
+
+  isOfflineDownloading = false;
+  if (btnStart) { btnStart.disabled = false; btnStart.style.opacity = '1'; }
+
+  if (shouldCancelOfflineDownload) {
+    if (progStatus) progStatus.textContent = '⚠️ Download cancelled.';
+    return;
+  }
+
+  const secMetadata = {
+    id: `${range.secId}_${layerChoice}_${zoomChoice}`,
+    sectionId: range.secId,
+    name: range.name,
+    startKm: range.startKm,
+    endKm: range.endKm,
+    layerChoice,
+    tileCount: completed,
+    sizeBytes: totalBytes,
+    downloadedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  };
+
+  await saveSectionMetadata(secMetadata);
+  await refreshOfflineStorageList();
+
+  if (progStatus) progStatus.textContent = '✅ Download complete! Saved to device.';
+  alert(`✓ Section "${secMetadata.name}" successfully saved!\n${completed} tiles (${(totalBytes / (1024*1024)).toFixed(1)} MB) stored. Ready for 100% offline field use.`);
+}
+
+function cancelOfflineDownload() {
+  shouldCancelOfflineDownload = true;
+  isOfflineDownloading = false;
+  const btnStart = document.getElementById('btnStartOfflineDownload');
+  if (btnStart) { btnStart.disabled = false; btnStart.style.opacity = '1'; }
+  const progStatus = document.getElementById('offlineProgressStatus');
+  if (progStatus) progStatus.textContent = '⚠️ Cancelling download...';
+}
+
+async function refreshOfflineStorageList() {
+  const listEl = document.getElementById('offlineSectionsList');
+  const countEl = document.getElementById('offlineSavedCount');
+  const totalTextEl = document.getElementById('offlineStorageTotalText');
+  if (!listEl) return;
+
+  const sections = await getAllSavedSections();
+  if (countEl) countEl.textContent = sections.length;
+
+  if (!sections.length) {
+    listEl.innerHTML = `
+      <div style="text-align:center; padding:24px; color:#64748b; font-size:12px;">
+        <span style="font-size:1.8rem; display:block; margin-bottom:6px;">📭</span>
+        No offline route sections saved yet.<br>Select a section and download tiles for offline track use.
+      </div>
+    `;
+    if (totalTextEl) totalTextEl.textContent = 'Total storage: 0 tiles (0 MB)';
+    return;
+  }
+
+  let totalTiles = 0;
+  let totalBytes = 0;
+  let html = '';
+
+  sections.forEach(s => {
+    totalTiles += s.tileCount || 0;
+    totalBytes += s.sizeBytes || 0;
+    const mb = ((s.sizeBytes || 0) / (1024 * 1024)).toFixed(1);
+    const layerLabel = s.layerChoice === 'both' ? 'Street & Satellite' : (s.layerChoice === 'satellite' ? 'Satellite HD' : 'Street Map');
+
+    html += `
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700; font-size:12.5px; color:#f8fafc;">${s.name}</div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+            <span style="color:#38bdf8;">${layerLabel}</span> • <b>${s.tileCount} tiles</b> (${mb} MB) • <span style="color:#64748b;">${s.downloadedAt || 'Saved'}</span>
+          </div>
+        </div>
+        <button class="btn-tool" onclick="handleDeleteOfflineSection('${s.id}', '${s.sectionId}')" style="background:#334155; color:#ef4444; border-color:#ef4444; font-size:11px; padding:4px 10px;" title="Delete this offline section">
+          🗑️ Delete
+        </button>
+      </div>
+    `;
+  });
+
+  listEl.innerHTML = html;
+  const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
+  if (totalTextEl) totalTextEl.textContent = `Total storage: ${sections.length} sections • ${totalTiles} tiles (${totalMb} MB)`;
+}
+
+async function handleDeleteOfflineSection(id, sectionId) {
+  if (!confirm('Are you sure you want to delete this cached offline route section?')) return;
+  await deleteOfflineSection(id, sectionId);
+  await refreshOfflineStorageList();
+}
+
+async function clearAllOfflineMaps() {
+  if (!confirm('Clear all offline maps and cached tiles from this device?')) return;
+  await clearAllOfflineData();
+  await refreshOfflineStorageList();
+  alert('All offline map data cleared.');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function exportRouteGeoJson() {
+  const range = getSelectedSectionRange();
+  const coords = getRouteCoordinates(range.startKm, range.endKm, range.isLink);
+  const lineCoordinates = coords.map(p => [p.lon, p.lat]);
+
+  const features = [
+    {
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: lineCoordinates
+      },
+      properties: {
+        route: range.name,
+        startKm: range.startKm,
+        endKm: range.endKm,
+        trackType: range.isLink ? "Link Line Chord" : "DFC Main Line"
+      }
+    }
+  ];
+
+  Object.values(keyplanStations).forEach(stn => {
+    const k = parseFloat(stn.dfcKm);
+    if (k >= range.startKm && k <= range.endKm) {
+      const gps = range.isLink ? getLinkLineGps(k) : getInterpolatedGps(k);
+      features.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [gps.lon, gps.lat] },
+        properties: { name: stn.name, code: stn.code, km: k, type: "Station" }
+      });
+    }
+  });
+
+  if (typeof OHE_POLES_DATA !== 'undefined') {
+    OHE_POLES_DATA.forEach(pole => {
+      if (pole.chainage >= range.startKm && pole.chainage <= range.endKm) {
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [pole.lon, pole.lat] },
+          properties: { poleNo: pole.poleNo, chainage: pole.chainage, type: "OHE Pole" }
+        });
+      }
+    });
+  }
+
+  const geojson = {
+    type: "FeatureCollection",
+    name: `DFC_Route_${range.secId}`,
+    features: features
+  };
+
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+  downloadBlob(blob, `DFC_Route_KM_${range.startKm.toFixed(1)}_${range.endKm.toFixed(1)}.geojson`);
+}
+
+function exportRouteCsvSummary() {
+  const range = getSelectedSectionRange();
+  let csv = "AssetType,Name,Chainage_KM,Station,Details\n";
+
+  Object.values(keyplanStations).forEach(stn => {
+    const k = parseFloat(stn.dfcKm);
+    if (k >= range.startKm && k <= range.endKm) {
+      csv += `Station,"${stn.name}",${k.toFixed(3)},"${stn.code}","${stn.type} - ${stn.lines}"\n`;
+    }
+  });
+
+  const bridges = (DB_DATA && DB_DATA.bridges) ? DB_DATA.bridges : [];
+  bridges.forEach(b => {
+    const k = parseFloat(b.chainage) || parseFloat(b.km) || 0;
+    if (k >= range.startKm && k <= range.endKm) {
+      csv += `Bridge,"${b.bridgeNo || b.name || 'Bridge'}",${k.toFixed(3)},"${b.station || ''}","Span: ${b.span || ''}, Type: ${b.type || ''}"\n`;
+    }
+  });
+
+  const lcs = (DB_DATA && DB_DATA.levelCrossings) ? DB_DATA.levelCrossings : [];
+  lcs.forEach(lc => {
+    const k = parseFloat(lc.chainage) || parseFloat(lc.km) || 0;
+    if (k >= range.startKm && k <= range.endKm) {
+      csv += `LevelCrossing,"${lc.lcNo || lc.name || 'LC'}",${k.toFixed(3)},"${lc.station || ''}","Class: ${lc.class || ''}, Type: ${lc.type || ''}"\n`;
+    }
+  });
+
+  if (typeof OHE_POLES_DATA !== 'undefined') {
+    OHE_POLES_DATA.forEach(p => {
+      if (p.chainage >= range.startKm && p.chainage <= range.endKm) {
+        csv += `OHE_Pole,"Pole ${p.poleNo}",${p.chainage.toFixed(3)},"${p.station || ''}","Lat: ${p.lat.toFixed(6)}, Lon: ${p.lon.toFixed(6)}"\n`;
+      }
+    });
+  }
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, `DFC_Assets_KM_${range.startKm.toFixed(1)}_${range.endKm.toFixed(1)}.csv`);
+}
+
+function exportRouteMapImage() {
+  const range = getSelectedSectionRange();
+  const coords = getRouteCoordinates(range.startKm, range.endKm, range.isLink);
+  if (!coords.length) {
+    alert('No coordinates found for selected section.');
+    return;
+  }
+
+  const c = document.createElement('canvas');
+  c.width = 1600;
+  c.height = 900;
+  const ctx = c.getContext('2d');
+
+  ctx.fillStyle = '#070a13';
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(0, 0, c.width, 70);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
+  ctx.fillText(`DFC ROUTE MAP: ${range.name.toUpperCase()}`, 30, 44);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText(`Chainage KM ${range.startKm.toFixed(3)} to KM ${range.endKm.toFixed(3)} • Total Span: ${(range.endKm - range.startKm).toFixed(3)} Km • Generated by DFC MAP`, 30, 105);
+
+  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+  coords.forEach(p => {
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lon < minLon) minLon = p.lon;
+    if (p.lon > maxLon) maxLon = p.lon;
+  });
+
+  const latSpan = maxLat - minLat || 0.001;
+  const lonSpan = maxLon - minLon || 0.001;
+  const padX = 100, padY = 160;
+  const plotW = c.width - padX * 2;
+  const plotH = c.height - padY - 80;
+
+  function mapX(lon) {
+    return padX + ((lon - minLon) / lonSpan) * plotW;
+  }
+  function mapY(lat) {
+    return c.height - 80 - ((lat - minLat) / latSpan) * plotH;
+  }
+
+  ctx.strokeStyle = '#0284c7';
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = '#38bdf8';
+  ctx.shadowBlur = 16;
+  ctx.beginPath();
+  coords.forEach((p, i) => {
+    const x = mapX(p.lon);
+    const y = mapY(p.lat);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  Object.values(keyplanStations).forEach(stn => {
+    const k = parseFloat(stn.dfcKm);
+    if (k >= range.startKm && k <= range.endKm) {
+      const gps = range.isLink ? getLinkLineGps(k) : getInterpolatedGps(k);
+      const sx = mapX(gps.lon);
+      const sy = mapY(gps.lat);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 15px system-ui, sans-serif';
+      ctx.fillText(`${stn.name} (KM ${k.toFixed(3)})`, sx + 12, sy + 5);
+    }
+  });
+
+  for (let km = Math.ceil(range.startKm); km <= Math.floor(range.endKm); km += 2) {
+    const gps = range.isLink ? getLinkLineGps(km) : getInterpolatedGps(km);
+    const mx = mapX(gps.lon);
+    const my = mapY(gps.lat);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(mx, my, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px monospace';
+    ctx.fillText(`KM ${km}`, mx + 6, my - 6);
+  }
+
+  c.toBlob((blob) => {
+    if (blob) {
+      downloadBlob(blob, `DFC_Route_Map_${range.startKm.toFixed(1)}_${range.endKm.toFixed(1)}.png`);
+    }
+  });
+}
+
+// -------------------------------------------------------------
 // 9. HARDWARE BACK BUTTON HOOK FOR ANDROID
 // -------------------------------------------------------------
 window.onAndroidBackButton = function() {
+  // -1. Close offline map modal if open
+  const offModal = document.getElementById('offlineMapModal');
+  if (offModal && offModal.classList.contains('open')) {
+    closeOfflineMapModal();
+    return true;
+  }
   // 0. Close distance calculator modal if open
   const distModal = document.getElementById('distanceCalcModal');
   if (distModal && distModal.classList.contains('open')) {
