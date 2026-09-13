@@ -9,18 +9,37 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import java.io.InputStream
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
+    private var backPressedTime: Long = 0
+    private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
+
+    private val fileChooserLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, data)
+            fileUploadCallback?.onReceiveValue(uris)
+        } else {
+            fileUploadCallback?.onReceiveValue(null)
+        }
+        fileUploadCallback = null
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,21 +48,64 @@ class MainActivity : ComponentActivity() {
         // Make Activity truly fullscreen & hide notification status bar
         hideSystemUI()
 
+        // Check runtime permissions for live GPS tracking & Camera inspection
+        val permissionsToRequest = mutableListOf<String>()
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            permissionsToRequest.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(android.Manifest.permission.CAMERA)
+        }
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissions(permissionsToRequest.toTypedArray(), 1001)
+        }
+
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.setGeolocationEnabled(true)
             settings.allowFileAccess = true
             settings.allowContentAccess = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
             
             // Expose native Android methods to Web App
             addJavascriptInterface(WebAppInterface(this@MainActivity), "AndroidNative")
 
+            webChromeClient = object : WebChromeClient() {
+                override fun onGeolocationPermissionsShowPrompt(
+                    origin: String?,
+                    callback: GeolocationPermissions.Callback?
+                ) {
+                    callback?.invoke(origin, true, false)
+                }
+
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    this@MainActivity.fileUploadCallback?.onReceiveValue(null)
+                    this@MainActivity.fileUploadCallback = filePathCallback
+                    val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "image/*"
+                    }
+                    try {
+                        fileChooserLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        this@MainActivity.fileUploadCallback = null
+                        return false
+                    }
+                    return true
+                }
+            }
+
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                    if (url != null && (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("intent:"))) {
+                    if (url != null && (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("intent:") || url.startsWith("https://wa.me/"))) {
                         try {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                             startActivity(intent)
@@ -71,7 +133,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContentView(webView)
-        webView.loadUrl("file:///android_asset/linear_diagram.html")
+        webView.loadUrl("file:///android_asset/index.html")
     }
 
     private fun hideSystemUI() {
@@ -106,10 +168,32 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
+        webView.evaluateJavascript(
+            "(function() { " +
+            "  try { " +
+            "    if (window.onAndroidBackButton && typeof window.onAndroidBackButton === 'function') { " +
+            "      return window.onAndroidBackButton() ? 'true' : 'false'; " +
+            "    } " +
+            "  } catch(e) {} " +
+            "  return 'false'; " +
+            "})()"
+        ) { result ->
+            if ("\"true\"" == result || "true" == result) {
+                // Handled by web app (dismissed popup, diagram to map, or modal)
+                return@evaluateJavascript
+            }
+
+            if (webView.canGoBack()) {
+                webView.goBack()
+                return@evaluateJavascript
+            }
+
+            if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                super.onBackPressed()
+            } else {
+                backPressedTime = System.currentTimeMillis()
+                Toast.makeText(this, "Press back again to exit DFC MAP", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -132,6 +216,32 @@ class MainActivity : ComponentActivity() {
                 activity.startActivity(intent)
             } catch (e: Exception) {
                 Toast.makeText(activity, "Error opening drawing: " + e.message, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        @JavascriptInterface
+        fun openPdfExternal(url: String) {
+            try {
+                if (url.isBlank()) return
+                var fullUrl = url
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    fullUrl = if (url.startsWith("/")) "https://smun.web.app$url" else "https://smun.web.app/$url"
+                }
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(Uri.parse(fullUrl), "application/pdf")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                val chooser = Intent.createChooser(intent, "Open with PDF Reader (ReadEra / Drive)")
+                chooser.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                activity.startActivity(chooser)
+            } catch (e: Exception) {
+                try {
+                    val fallback = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    fallback.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    activity.startActivity(fallback)
+                } catch (ex: Exception) {
+                    Toast.makeText(activity, "Cannot open PDF reader: " + ex.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

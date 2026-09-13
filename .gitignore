@@ -32,3 +32,10 @@ android-app/local.properties
 android-app/.idea/
 android-app/*.iml
 .vercel
+
+# Android binaries and keystores
+*.apk
+*.aab
+*.keystore
+*.jks
+*.png.backup
