@@ -1016,7 +1016,7 @@
     /* Floating Action Controls Stack (Right Side) */
     .floating-map-actions-stack {
       position: absolute;
-      bottom: 24px;
+      bottom: 70px;
       right: 14px;
       z-index: 1000;
       display: flex;
@@ -1272,8 +1272,21 @@
         position: absolute;
         right: 0;
         top: 0;
-        width: 320px;
-        box-shadow: -5px 0 20px rgba(0,0,0,0.6);
+        bottom: 56px;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: -5px 0 25px rgba(0,0,0,0.85);
+        z-index: 1050;
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .inspector-sidebar.collapsed {
+        transform: translateX(100%) !important;
+        pointer-events: none;
+      }
+      .sb-close-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
       }
       #btnViewSplit {
         display: none !important;
@@ -1287,19 +1300,22 @@
         width: auto !important;
         max-width: none !important;
       }
+      .bottom-center-satellite-btn {
+        bottom: 66px !important;
+      }
       .live-speedometer-hud {
         left: 10px !important;
-        bottom: 12px !important;
+        bottom: 68px !important;
         min-width: 140px !important;
         padding: 6px 10px !important;
       }
       .floating-map-actions-stack {
-        bottom: 16px !important;
+        bottom: 68px !important;
         right: 10px !important;
       }
       .km-result-popup-card {
         width: calc(100% - 16px) !important;
-        bottom: 8px !important;
+        bottom: 64px !important;
         padding: 10px 12px !important;
       }
     }
@@ -1342,7 +1358,7 @@
     /* Live Speedometer HUD (Bottom Left of Map) */
     .live-speedometer-hud {
       position: absolute;
-      bottom: 16px;
+      bottom: 70px;
       left: 16px;
       z-index: 999;
       background: rgba(15, 23, 42, 0.94);
@@ -1471,7 +1487,7 @@
     /* Bottom-Center Floating Satellite Switcher */
     .bottom-center-satellite-btn {
       position: absolute;
-      bottom: 20px;
+      bottom: 68px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
@@ -1505,6 +1521,100 @@
       border-color: #38bdf8;
       color: #ffffff;
       box-shadow: 0 6px 24px rgba(2, 132, 199, 0.7);
+    }
+
+    /* Leaflet bottom controls offset above bottom tabs */
+    .leaflet-bottom {
+      bottom: 60px !important;
+    }
+
+    /* Bottom 2-Tab Navigation Bar (Map ⇄ Inspector) */
+    .app-bottom-nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(11, 18, 32, 0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 1200;
+      padding: 0 16px;
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.75);
+    }
+    .bottom-nav-tab {
+      flex: 1;
+      max-width: 280px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1.5px solid #334155;
+      border-radius: 24px;
+      color: #94a3b8;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+    .bottom-nav-tab:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: #f1f5f9;
+      border-color: #64748b;
+    }
+    .bottom-nav-tab.active {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.35), rgba(14, 165, 233, 0.2));
+      border: 1.5px solid #0284c7;
+      color: #38bdf8;
+      box-shadow: 0 0 18px rgba(2, 132, 199, 0.45);
+    }
+    .bottom-nav-tab.active .bottom-tab-label {
+      color: #38bdf8;
+      font-weight: 800;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+    .bottom-tab-icon {
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+    .bottom-nav-tab.active .bottom-tab-icon {
+      transform: scale(1.15);
+    }
+    .bottom-tab-label {
+      font-size: 13.5px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Inspector Header Close Button */
+    .sb-close-btn {
+      display: none;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .sb-close-btn:hover {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
     }
 
     /* Distance Measurement Calculator Tabs */
@@ -1807,6 +1917,7 @@
             <div id="omniDropdownSidebar" class="omni-search-dropdown" style="display:none;"></div>
           </div>
           <button class="sb-search-btn" onclick="executeSmartSearch(document.getElementById('kmSearchInput').value)">GO</button>
+          <button class="sb-close-btn" onclick="onBottomTabClick('map')" title="Close Inspector & Return to Map">✕</button>
         </div>
         <div class="sb-step-row">
           <button class="sb-step-btn" onclick="stepKm(-0.5)">◀ -500m</button>
@@ -2317,6 +2428,21 @@ let cadW = 0, cadH = 0;
     const initialTargetKm = (typeof currentKm === 'number' && !isNaN(currentKm)) ? currentKm : 1170.435;
     navigateToKm(initialTargetKm, true, isLinkLineSelected);
   } catch(e) { console.error('navigateToKm error:', e); }
+
+  // Bottom tabs and mobile inspector initial setup (Start on Map view)
+  try {
+    if (window.innerWidth <= 860 || window.AndroidNative) {
+      const sb = document.getElementById('inspectorSidebar');
+      if (sb) sb.classList.add('collapsed');
+      const btn = document.getElementById('btnToggleSidebar');
+      if (btn) btn.classList.remove('active');
+      updateBottomTabs('map');
+    } else {
+      const sb = document.getElementById('inspectorSidebar');
+      const isExpanded = sb && !sb.classList.contains('collapsed');
+      updateBottomTabs(isExpanded ? 'inspector' : 'map');
+    }
+  } catch(e) {}
 });
 
 function parseTrackPolyline() {
@@ -4921,11 +5047,64 @@ function toggleGpsDiagramView() {
   }
 }
 
-function toggleSidebar() {
+function onBottomTabClick(tab) {
+  if (tab === 'map') {
+    // If inspector sidebar is open, collapse it
+    const sb = document.getElementById('inspectorSidebar');
+    if (sb && !sb.classList.contains('collapsed')) {
+      toggleSidebar(false);
+    }
+    // If in linear mode, switch to map
+    if (typeof viewMode !== 'undefined' && viewMode === 'linear') {
+      setViewMode('map');
+    }
+    updateBottomTabs('map');
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 280);
+  } else if (tab === 'inspector') {
+    // Open inspector sidebar
+    const sb = document.getElementById('inspectorSidebar');
+    if (sb && sb.classList.contains('collapsed')) {
+      toggleSidebar(true);
+    } else {
+      updateBottomTabs('inspector');
+    }
+    const searchInp = document.getElementById('kmSearchInput');
+    if (searchInp) {
+      setTimeout(() => {
+        try { searchInp.focus(); } catch(e) {}
+      }, 180);
+    }
+  }
+}
+
+function updateBottomTabs(activeTab) {
+  const mapTab = document.getElementById('mTabMap');
+  const inspTab = document.getElementById('mTabInspector');
+  if (mapTab) {
+    mapTab.classList.toggle('active', activeTab === 'map');
+  }
+  if (inspTab) {
+    inspTab.classList.toggle('active', activeTab === 'inspector');
+  }
+}
+
+function toggleSidebar(forceOpen) {
   const sb = document.getElementById('inspectorSidebar');
   const btn = document.getElementById('btnToggleSidebar');
-  sb.classList.toggle('collapsed');
-  btn.classList.toggle('active', !sb.classList.contains('collapsed'));
+  if (typeof forceOpen === 'boolean') {
+    if (forceOpen) {
+      sb.classList.remove('collapsed');
+    } else {
+      sb.classList.add('collapsed');
+    }
+  } else {
+    sb.classList.toggle('collapsed');
+  }
+  const isExpanded = !sb.classList.contains('collapsed');
+  if (btn) btn.classList.toggle('active', isExpanded);
+  updateBottomTabs(isExpanded ? 'inspector' : 'map');
   setTimeout(() => {
     if (map) map.invalidateSize();
     resizeLinearCanvases();
@@ -7036,10 +7215,10 @@ window.onAndroidBackButton = function() {
     closeStaffModal();
     return true;
   }
-  // 7. Collapse inspector sidebar on mobile
+  // 7. Collapse inspector sidebar on mobile or in app
   const sb = document.getElementById('inspectorSidebar');
-  if (sb && !sb.classList.contains('collapsed') && window.innerWidth <= 860) {
-    toggleSidebar();
+  if (sb && !sb.classList.contains('collapsed') && (window.innerWidth <= 860 || window.AndroidNative)) {
+    toggleSidebar(false);
     return true;
   }
   // 8. If in linear diagram mode, switch back to map mode!
@@ -7073,6 +7252,18 @@ window.onAndroidBackButton = function() {
     </div>
   </div>
 </div>
+
+<!-- Bottom 2-Tab Navigation Bar (Map ⇄ Inspector) -->
+<nav class="app-bottom-nav-bar" id="appBottomNavBar">
+  <button type="button" class="bottom-nav-tab active" id="mTabMap" onclick="onBottomTabClick('map')" title="View Track Map">
+    <span class="bottom-tab-icon">🗺️</span>
+    <span class="bottom-tab-label">Track Map</span>
+  </button>
+  <button type="button" class="bottom-nav-tab" id="mTabInspector" onclick="onBottomTabClick('inspector')" title="Open KM Inspector">
+    <span class="bottom-tab-icon">📋</span>
+    <span class="bottom-tab-label">KM Inspector</span>
+  </button>
+</nav>
 
 </body>
 </html>
