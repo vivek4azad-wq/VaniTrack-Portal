@@ -1585,7 +1585,7 @@
       <!-- 3-Dots More Options Dropdown (Keyplans, P&P Drawings, Camera APK, Inspector) -->
       <div class="toolbar-dropdown-wrap" style="position:relative; display:inline-block;">
         <button class="btn-tool" id="btnThreeDotsMenu" onclick="toggleThreeDotsMenu(event)" title="More Tools & Drawings" style="padding:2px 10px; font-size:1.15rem; line-height:1; font-weight:800; cursor:pointer;">⋮</button>
-        <div class="three-dots-dropdown-menu" id="threeDotsDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#0b1120; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.85); min-width:215px; z-index:9999; padding:6px 0;">
+        <div class="three-dots-dropdown-menu" id="threeDotsDropdown" style="display:none; position:fixed; background:#0b1120; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.85); min-width:215px; z-index:999999; padding:6px 0;">
           <button class="three-dots-item-btn" onclick="openStationEsp(currentStationCode || 'SMUN'); closeThreeDotsMenu();">
             <span>⚡</span> <span>Keyplans (HD)</span>
           </button>
@@ -1611,27 +1611,6 @@
       <div class="pane-map" id="mapPane" style="position: relative;">
         <!-- High-Precision GIS Satellite Track Layer with KM Milestones & Stations -->
         <div id="mapView" style="width: 100%; height: 100%; display: block;"></div>
-
-        <!-- Floating Google Maps-Style Omni-Search Bar on Map -->
-        <div id="mapFloatingSearchWrap" class="gmaps-search-bar-wrap">
-          <div class="gmaps-search-box">
-            <span class="gmaps-search-icon">🔍</span>
-            <input
-              type="text"
-              id="mapOmniSearchInput"
-              placeholder="Search KM (1170.4), Pole (1173/12), Staff, Asset..."
-              autocomplete="off"
-              spellcheck="false"
-              oninput="onOmniSearchInput(this.value, 'map')"
-              onkeydown="if(event.key==='Enter') executeSmartSearch(this.value)"
-            />
-            <button id="mapSearchClearBtn" class="gmaps-clear-btn" onclick="clearSearchInput('map')" style="display:none;" title="Clear Search">✕</button>
-            <button class="gmaps-search-btn" onclick="executeSmartSearch(document.getElementById('mapOmniSearchInput').value)" title="Search">
-              <span>Search</span>
-            </button>
-          </div>
-          <div id="omniDropdownMap" class="omni-search-dropdown" style="display:none;"></div>
-        </div>
 
         <!-- Floating Mobile/Desktop Action Controls (GPS⇄Diagram Switcher, Camera, Satellite Layer, Tap to Live Location) -->
         <div class="floating-map-actions-stack">
@@ -1693,109 +1672,7 @@
 
         
 
-        <!-- Google Maps-Style Search Result Pop-up Card / Bottom Sheet -->
-        <div id="kmResultPopupCard" class="km-result-popup-card" style="display:none;">
-          <div class="popup-card-drag-handle" onclick="closeKmResultPopup()"></div>
-          <div class="popup-card-header">
-            <div class="popup-card-title-group">
-              <div class="popup-km-badge" id="popupDfcKm">🚆 KM 1170.435</div>
-              <div class="popup-sub-badges">
-                <span class="popup-badge ir-badge" id="popupIrKm">IR ~281.0</span>
-                <span class="popup-badge station-badge" id="popupStation">SMUN (New Shambhu)</span>
-              </div>
-            </div>
-            <button class="popup-close-btn" onclick="closeKmResultPopup()" title="Close details">✕</button>
-          </div>
 
-          <div class="popup-card-body">
-            <div class="popup-info-grid">
-              <div class="popup-info-item">
-                <span class="popup-info-label">⚡ NEAREST OHE POLE</span>
-                <span class="popup-info-val highlight-red" id="popupOhePole">Pole 1170/01 (12m)</span>
-              </div>
-              <div class="popup-info-item">
-                <span class="popup-info-label">📍 GPS COORDINATES</span>
-                <span class="popup-info-val font-mono" id="popupGpsCoords">30.43863°, 76.66772°</span>
-              </div>
-              <div class="popup-info-item">
-                <span class="popup-info-label">🏢 SECTION / JURISDICTION</span>
-                <span class="popup-info-val" id="popupSectionName">KNZN - SMUN (Double Line)</span>
-              </div>
-              <div class="popup-info-item">
-                <span class="popup-info-label">👷 KEYMAN / PATROL</span>
-                <span class="popup-info-val" id="popupStaffInfo">Beat 31 • Call SSE/JE</span>
-              </div>
-            </div>
-
-            <!-- Nearby Assets Snippet if any -->
-            <div id="popupAssetSnippet" class="popup-asset-snippet" style="display:none;">
-              <span class="asset-icon">🌉</span>
-              <span id="popupAssetText" class="asset-text">Major Bridge #249 at Km 1170.620</span>
-            </div>
-
-                        <!-- Small Details / Technical Data Accordion (Gradient, FL, NGL, Bank/Cutting, Staff, Assets +-500m) -->
-            <div class="popup-details-accordion">
-              <button id="btnTogglePopupDetails" class="popup-details-toggle-btn" onclick="togglePopupTechnicalDetails()">
-                <span>📊 Small Details (Gradient, FL/NGL, Bank, Staff, Assets ±500m)</span>
-                <span id="popupDetailsToggleArrow" class="toggle-arrow">▼</span>
-              </button>
-
-              <div id="popupTechnicalDetailsPanel" class="popup-tech-details-panel" style="display:none;">
-                <!-- Track Profile Grid -->
-                <div class="tech-sub-title">📐 Track Profile & Formation Levels</div>
-                <div class="tech-profile-grid">
-                  <div class="tech-profile-chip">
-                    <span class="tech-chip-label">GRADIENT</span>
-                    <span class="tech-chip-val" id="popDetailGradient">--</span>
-                  </div>
-                  <div class="tech-profile-chip">
-                    <span class="tech-chip-label">FL (FORMATION LEVEL)</span>
-                    <span class="tech-chip-val" id="popDetailFL">--</span>
-                  </div>
-                  <div class="tech-profile-chip">
-                    <span class="tech-chip-label">NGL (GROUND LEVEL)</span>
-                    <span class="tech-chip-val" id="popDetailNGL">--</span>
-                  </div>
-                  <div class="tech-profile-chip">
-                    <span class="tech-chip-label">BANK / CUTTING</span>
-                    <span class="tech-chip-val highlight-gold" id="popDetailBank">--</span>
-                  </div>
-                </div>
-
-                <!-- Assigned Staff Section -->
-                <div class="tech-sub-title">👷 Track Maintenance Personnel</div>
-                <div id="popDetailStaffSection" class="tech-staff-list">
-                  <div class="tech-item-row"><span style="color:#94a3b8;">Loading staff data...</span></div>
-                </div>
-
-                <!-- Assets in +-500m Corridor Section -->
-                <div class="tech-sub-title">
-                  <span>🔍 Assets in ±500m Corridor</span>
-                  <span id="popDetailAssetCount" class="tech-count-badge">0 Found</span>
-                </div>
-                <div id="popDetailAssetList" class="tech-asset-list">
-                  <div class="tech-item-row"><span style="color:#94a3b8;">Scanning corridor...</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Action Buttons Row -->
-            <div class="popup-actions-row">
-              <button class="popup-act-btn btn-view-diagram" onclick="jumpToLinearFromPopup()" title="Open Linear Track Profile at this KM">
-                <span>📏 View in Diagram</span>
-              </button>
-              <a id="popupGmapsLink" href="#" target="_blank" rel="noreferrer" class="popup-act-btn btn-gmaps" title="Open GPS Location in Google Maps app">
-                <span>🗺️ Google Maps</span>
-              </a>
-              <button class="popup-act-btn btn-camera" onclick="openTrackCamera()" title="Capture Geotagged Track Photo">
-                <span>📷 Geotag Camera</span>
-              </button>
-              <button class="popup-act-btn btn-copy" onclick="copyPopupKmDetails()" title="Copy KM & GPS Details">
-                <span id="popupCopyBtnText">📋 Copy</span>
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- Hidden Track Camera Input -->
         <input type="file" id="trackCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleTrackCameraPhoto(event)">
@@ -5668,10 +5545,30 @@ function onTapMyLocation() {
 
 // 3-Dots More Options Menu Handlers
 function toggleThreeDotsMenu(e) {
-  if (e) e.stopPropagation();
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
   const dd = document.getElementById('threeDotsDropdown');
-  if (dd) {
-    dd.style.display = (dd.style.display === 'block') ? 'none' : 'block';
+  const btn = document.getElementById('btnThreeDotsMenu');
+  if (!dd || !btn) return;
+
+  if (dd.parentElement !== document.body) {
+    document.body.appendChild(dd);
+  }
+
+  const isVisible = dd.style.display === 'block';
+  if (isVisible) {
+    closeThreeDotsMenu();
+  } else {
+    const rect = btn.getBoundingClientRect();
+    dd.style.position = 'fixed';
+    dd.style.top = (rect.bottom + 6) + 'px';
+    const rightDist = Math.max(8, window.innerWidth - rect.right);
+    dd.style.right = rightDist + 'px';
+    dd.style.left = 'auto';
+    dd.style.zIndex = '999999';
+    dd.style.display = 'block';
   }
 }
 
@@ -5681,11 +5578,16 @@ function closeThreeDotsMenu() {
 }
 
 document.addEventListener('click', (e) => {
-  const wrap = document.querySelector('.toolbar-dropdown-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    closeThreeDotsMenu();
+  const dd = document.getElementById('threeDotsDropdown');
+  const btn = document.getElementById('btnThreeDotsMenu');
+  if (dd && dd.style.display === 'block') {
+    if (!dd.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      closeThreeDotsMenu();
+    }
   }
 });
+window.addEventListener('resize', closeThreeDotsMenu);
+window.addEventListener('scroll', closeThreeDotsMenu, true);
 
 function onLivePositionUpdate(pos) {
   const lat = pos.coords.latitude;
@@ -6154,15 +6056,11 @@ function togglePopupTechnicalDetails() {
 }
 
 function showKmResultPopup(km, isLinkLine = false) {
-  let gps = isLinkLine ? getLinkLineGps(km) : getInterpolatedGps(km);
-  updateKmResultPopup(km, gps, isLinkLine);
-  const card = document.getElementById('kmResultPopupCard');
-  if (card) card.style.display = 'block';
+  // Map floating search box and popup card removed per user request
 }
 
 function closeKmResultPopup() {
-  const card = document.getElementById('kmResultPopupCard');
-  if (card) card.style.display = 'none';
+  // Map floating search box and popup card removed per user request
 }
 
 function jumpToLinearFromPopup() {
@@ -6271,10 +6169,10 @@ function resetMapNorth() {
 // 9. HARDWARE BACK BUTTON HOOK FOR ANDROID
 // -------------------------------------------------------------
 window.onAndroidBackButton = function() {
-  // 1. Close search popup card
-  const popup = document.getElementById('kmResultPopupCard');
-  if (popup && popup.style.display !== 'none') {
-    closeKmResultPopup();
+  // 1. Close 3-dots options menu if open
+  const threeDots = document.getElementById('threeDotsDropdown');
+  if (threeDots && threeDots.style.display === 'block') {
+    closeThreeDotsMenu();
     return true;
   }
   // 2. Close camera preview modal
