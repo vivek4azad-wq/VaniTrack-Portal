@@ -1730,10 +1730,6 @@
 <div id="appWrapper">
   <!-- 1. Top Master Header & Toolbar -->
   <header class="master-toolbar">
-    <div class="toolbar-brand">
-      <span>🚆 DFCCIL Workstation</span>
-    </div>
-
     <!-- Quick Station Switcher Dropdown -->
     <div class="toolbar-group" style="background:rgba(15,23,42,0.85); padding:2px 8px; border-radius:8px; border:1px solid #1e293b; display:flex; align-items:center; gap:6px;">
       <span style="font-size:0.68rem; color:#38bdf8; font-weight:800;">STATION:</span>
@@ -3319,74 +3315,418 @@ function initMap() {
 
   curveGroup.addTo(map);
 
-  // OHE Poles Layer (1,663 Surveyed Masts from All data for OHE pole.xlsx)
-  // By default: Small red points (L.circleMarker, radius 2.8, #ef4444)
-  // On Click: OHE Pole Number card popup with chainage, section, GPS, MSL altitude
-  // On Hover: Tooltip showing pole number
-  oheGroup = L.layerGroup();
-  const oheCanvasRenderer = L.canvas({ padding: 0.5 });
+  // High-Performance Leaflet Canvas Layer for OHE Railway Masts (3,456 Poles)
+  // Renders vector Inverted-L Railway Cantilever Mast on close zoom (>=16) and lightweight dots on far zoom (<16)
+  // Zero DOM markers or tooltips created per-pole: hardware-accelerated 60 FPS Canvas rendering
+  const OheCanvasLayer = L.Layer.extend({
+    options: {
+      padding: 0.5,
+      pane: 'overlayPane'
+    },
 
+    initialize: function(polesData, options) {
+      L.setOptions(this, options);
+      this._poles = (polesData && Array.isArray(polesData)) ? polesData : [];
+      this._visiblePoles = [];
+      this._activePole = null;
+      this._singleTooltip = null;
+      this._container = null;
+      this._ctx = null;
+    },
+
+    setPolesData: function(polesData) {
+      this._poles = (polesData && Array.isArray(polesData)) ? polesData : [];
+      this._update();
+    },
+
+    onAdd: function(map) {
+      this._map = map;
+      if (!this._container) {
+        this._initCanvas();
+      }
+      this.getPane().appendChild(this._container);
+
+      map.on('moveend', this._update, this);
+      map.on('viewreset', this._reset, this);
+      map.on('resize', this._reset, this);
+      if (map.options.zoomAnimation && L.Browser.any3d) {
+        map.on('zoomanim', this._animateZoom, this);
+      }
+      map.on('click', this._onMapClick, this);
+      map.on('mousemove', this._onMouseMove, this);
+
+      this._reset();
+    },
+
+    onRemove: function(map) {
+      if (this._container && this._container.parentNode) {
+        this._container.parentNode.removeChild(this._container);
+      }
+      map.off('moveend', this._update, this);
+      map.off('viewreset', this._reset, this);
+      map.off('resize', this._reset, this);
+      if (map.options.zoomAnimation && L.Browser.any3d) {
+        map.off('zoomanim', this._animateZoom, this);
+      }
+      map.off('click', this._onMapClick, this);
+      map.off('mousemove', this._onMouseMove, this);
+
+      if (this._singleTooltip && this._map && this._map.hasLayer(this._singleTooltip)) {
+        this._map.removeLayer(this._singleTooltip);
+      }
+      this._map = null;
+    },
+
+    _initCanvas: function() {
+      const canvas = this._container = L.DomUtil.create('canvas', 'leaflet-ohe-canvas-layer');
+      canvas.style.position = 'absolute';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '350';
+      this._ctx = canvas.getContext('2d');
+    },
+
+    _reset: function() {
+      this._update();
+    },
+
+    _animateZoom: function(e) {
+      if (!this._map || !this._container || !this._bounds) return;
+      const scale = this._map.getZoomScale(e.zoom, this._zoom);
+      const p = this.options.padding || 0.5;
+      const viewHalf = this._map.getSize().multiplyBy(0.5 + p);
+      const currentCenterPoint = this._map.project(this._center, e.zoom);
+      const topLeftOffset = viewHalf.multiplyBy(-scale).add(currentCenterPoint)
+        .subtract(this._map._getNewPixelOrigin(e.center, e.zoom));
+
+      if (L.Browser.any3d) {
+        L.DomUtil.setTransform(this._container, topLeftOffset, scale);
+      } else {
+        L.DomUtil.setPosition(this._container, topLeftOffset);
+      }
+    },
+
+    _update: function() {
+      if (!this._map || !this._container) return;
+      const p = this.options.padding || 0.5;
+      const size = this._map.getSize();
+      if (size.x <= 0 || size.y <= 0) return;
+
+      const min = this._map.containerPointToLayerPoint(size.multiplyBy(-p)).round();
+      this._bounds = new L.Bounds(min, min.add(size.multiplyBy(1 + p * 2)).round());
+      this._center = this._map.getCenter();
+      this._zoom = this._map.getZoom();
+
+      const b = this._bounds;
+      const container = this._container;
+      const bSize = b.getSize();
+      const dpr = window.devicePixelRatio || 1;
+
+      L.DomUtil.setPosition(container, b.min);
+
+      container.width = Math.round(bSize.x * dpr);
+      container.height = Math.round(bSize.y * dpr);
+      container.style.width = bSize.x + 'px';
+      container.style.height = bSize.y + 'px';
+
+      const ctx = this._ctx;
+      ctx.save();
+      if (dpr !== 1) {
+        ctx.scale(dpr, dpr);
+      }
+      ctx.translate(-b.min.x, -b.min.y);
+
+      this._draw(ctx);
+
+      ctx.restore();
+    },
+
+    _draw: function(ctx) {
+      if (!this._map || !this._poles || !this._poles.length) return;
+
+      const zoom = this._map.getZoom();
+      if (zoom < 11) {
+        this._visiblePoles = [];
+        return;
+      }
+
+      const mapBounds = this._map.getBounds().pad(0.35);
+      const isDetailed = zoom >= 16;
+      const visiblePoles = [];
+
+      for (let i = 0; i < this._poles.length; i++) {
+        const p = this._poles[i];
+        if (p.lat >= mapBounds.getSouth() && p.lat <= mapBounds.getNorth() &&
+            p.lon >= mapBounds.getWest() && p.lon <= mapBounds.getEast()) {
+          visiblePoles.push(p);
+        }
+      }
+
+      this._visiblePoles = visiblePoles;
+
+      // LOD 1: Zoom < 16 (Small clean dot)
+      if (!isDetailed) {
+        ctx.beginPath();
+        for (let i = 0; i < visiblePoles.length; i++) {
+          const p = visiblePoles[i];
+          const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+          ctx.moveTo(pt.x + 2.5, pt.y);
+          ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = '#ef4444';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.lineWidth = 1;
+        ctx.fill();
+        ctx.stroke();
+
+        if (this._activePole) {
+          const apt = this._map.latLngToLayerPoint([this._activePole.lat, this._activePole.lon]);
+          ctx.beginPath();
+          ctx.arc(apt.x, apt.y, 6, 0, Math.PI * 2);
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+        return;
+      }
+
+      // LOD 2: Zoom >= 16 (Full Vector Inverted-L Cantilever Mast Diagram)
+      // High contrast dark outline for both Street & Satellite Map visibility
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.lineWidth = 4.2;
+      ctx.beginPath();
+      for (let i = 0; i < visiblePoles.length; i++) {
+        const p = visiblePoles[i];
+        const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(pt.x, pt.y - 18);
+        ctx.moveTo(pt.x, pt.y - 17);
+        ctx.lineTo(pt.x + 12, pt.y - 17);
+      }
+      ctx.stroke();
+
+      // Primary Red Mast & Cantilever lines (#ef4444)
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (let i = 0; i < visiblePoles.length; i++) {
+        const p = visiblePoles[i];
+        const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(pt.x, pt.y - 18);
+        ctx.moveTo(pt.x, pt.y - 17);
+        ctx.lineTo(pt.x + 12, pt.y - 17);
+      }
+      ctx.stroke();
+
+      // Base anchor dots (#ef4444 with dark red border)
+      ctx.fillStyle = '#ef4444';
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let i = 0; i < visiblePoles.length; i++) {
+        const p = visiblePoles[i];
+        const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+        ctx.moveTo(pt.x + 2.2, pt.y);
+        ctx.arc(pt.x, pt.y, 2.2, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      // Yellow insulator beads (#facc15 with amber border)
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#854d0e';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      for (let i = 0; i < visiblePoles.length; i++) {
+        const p = visiblePoles[i];
+        const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+        ctx.moveTo(pt.x + 11 + 1.8, pt.y - 16);
+        ctx.arc(pt.x + 11, pt.y - 16, 1.8, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      // Close zoom mast labels (Zoom >= 18)
+      if (zoom >= 18) {
+        ctx.font = '700 9px "JetBrains Mono", monospace, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < visiblePoles.length; i++) {
+          const p = visiblePoles[i];
+          const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+          const txt = p.poleNo;
+          const w = ctx.measureText(txt).width;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.fillRect(pt.x + 13, pt.y - 18, w + 6, 12);
+          ctx.fillStyle = '#fca5a5';
+          ctx.fillText(txt, pt.x + 16, pt.y - 12);
+        }
+      }
+
+      // Selected pole highlight indicator
+      if (this._activePole) {
+        const apt = this._map.latLngToLayerPoint([this._activePole.lat, this._activePole.lon]);
+        ctx.beginPath();
+        ctx.arc(apt.x, apt.y, 7, 0, Math.PI * 2);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+    },
+
+    _findNearestPole: function(layerPoint, maxTolerance) {
+      if (!this._visiblePoles || !this._visiblePoles.length) return null;
+      let closest = null;
+      let minDist = maxTolerance || 16;
+      const zoom = this._map ? this._map.getZoom() : 16;
+      const isDetailed = zoom >= 16;
+
+      for (let i = 0; i < this._visiblePoles.length; i++) {
+        const p = this._visiblePoles[i];
+        const pt = this._map.latLngToLayerPoint([p.lat, p.lon]);
+        let dist;
+        if (isDetailed) {
+          const clampedX = Math.max(pt.x - 2, Math.min(pt.x + 14, layerPoint.x));
+          const clampedY = Math.max(pt.y - 20, Math.min(pt.y + 2, layerPoint.y));
+          dist = Math.hypot(layerPoint.x - clampedX, layerPoint.y - clampedY);
+        } else {
+          dist = Math.hypot(layerPoint.x - pt.x, layerPoint.y - pt.y);
+        }
+        if (dist < minDist) {
+          minDist = dist;
+          closest = p;
+        }
+      }
+      return closest;
+    },
+
+    _onMapClick: function(e) {
+      if (!this._map) return;
+      const tolerance = (L.Browser && L.Browser.mobile) ? 20 : 14;
+      const pole = this._findNearestPole(e.layerPoint, tolerance);
+      if (pole) {
+        this._activePole = pole;
+        this._update();
+        window.openOhePolePopup(pole);
+        L.DomEvent.stopPropagation(e);
+      }
+    },
+
+    _onMouseMove: function(e) {
+      if (!this._map || (L.Browser && L.Browser.mobile)) return;
+      const pole = this._findNearestPole(e.layerPoint, 10);
+      const container = this._map.getContainer();
+      if (pole) {
+        container.style.cursor = 'pointer';
+        if (!this._singleTooltip) {
+          this._singleTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'ohe-mast-tooltip',
+            offset: [6, -20]
+          });
+        }
+        this._singleTooltip.setLatLng([pole.lat, pole.lon]);
+        this._singleTooltip.setContent(`⚡ OHE ${pole.poleNo}`);
+        if (!this._map.hasLayer(this._singleTooltip)) {
+          this._map.addLayer(this._singleTooltip);
+        }
+      } else {
+        if (container.style.cursor === 'pointer') {
+          container.style.cursor = '';
+        }
+        if (this._singleTooltip && this._map.hasLayer(this._singleTooltip)) {
+          this._map.removeLayer(this._singleTooltip);
+        }
+      }
+    }
+  });
+
+  L.oheCanvasLayer = function(polesData, options) {
+    return new OheCanvasLayer(polesData, options);
+  };
+
+  // Popup Handler for OHE Mast
+  window.openOhePolePopup = function(poleOrNo) {
+    if (!map) return;
+    let pole = poleOrNo;
+    if (typeof poleOrNo === 'string' && typeof OHE_POLES_DATA !== 'undefined') {
+      pole = OHE_POLES_DATA.find(p => p.poleNo === poleOrNo);
+    }
+    if (!pole) return;
+
+    if (typeof oheGroup !== 'undefined' && oheGroup && !map.hasLayer(oheGroup)) {
+      map.addLayer(oheGroup);
+    }
+
+    if (oheGroup && oheGroup._activePole !== pole) {
+      oheGroup._activePole = pole;
+      if (typeof oheGroup._update === 'function') oheGroup._update();
+    }
+
+    const surveyNote = pole.surveyNo ? `<div style="font-size:10px; color:#f59e0b; margin-top:2px;">(Survey Tag: ${pole.surveyNo})</div>` : '';
+    const popupHtml = `
+      <div class="ohe-mast-popup" style="font-family:system-ui,-apple-system,sans-serif; min-width:210px; color:#f8fafc; padding:3px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:6px;">
+          <span style="font-weight:800; color:#ef4444; font-size:14px; letter-spacing:0.5px;">⚡ OHE ${pole.poleNo}</span>
+          <span style="background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444; border-radius:3px; padding:1px 5px; font-size:9px; font-weight:800;">OHE MAST</span>
+        </div>
+        ${surveyNote}
+        <div style="font-size:11.5px; color:#cbd5e1; line-height:1.5;">
+          <div>📍 <b>Chainage:</b> <span style="font-family:monospace; color:#38bdf8; font-weight:700;">KM ${pole.chainage.toFixed(3)}</span></div>
+          <div>🏢 <b>Section:</b> <span>${pole.section}</span></div>
+          <div>🌐 <b>GPS:</b> <span style="font-family:monospace; color:#94a3b8;">${pole.lat.toFixed(6)}°, ${pole.lon.toFixed(6)}°</span></div>
+          <div>⛰️ <b>MSL Altitude:</b> <span>${pole.alt ? pole.alt.toFixed(1) + ' m' : 'N/A'}</span></div>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button onclick="navigateToKm(${pole.chainage}, false, false, {lat:${pole.lat}, lon:${pole.lon}})" style="flex:1; background:#0284c7; color:#fff; border:none; border-radius:4px; padding:5px 0; font-size:11px; font-weight:700; cursor:pointer;">
+            🎯 Focus Track
+          </button>
+          <button onclick="navigator.clipboard.writeText('${pole.lat.toFixed(6)}, ${pole.lon.toFixed(6)}'); alert('GPS Coordinates copied: ${pole.lat.toFixed(6)}, ${pole.lon.toFixed(6)}')" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:4px; padding:5px 8px; font-size:11px; cursor:pointer;" title="Copy GPS Coordinates">
+            📋
+          </button>
+        </div>
+      </div>
+    `;
+
+    L.popup({ minWidth: 210, className: 'ohe-popup-custom', offset: [6, -18] })
+      .setLatLng([pole.lat, pole.lon])
+      .setContent(popupHtml)
+      .openOn(map);
+  };
+
+  // Build window.oheMarkerMap proxy lookup for external compatibility
+  window.oheMarkerMap = {};
   if (typeof OHE_POLES_DATA !== 'undefined' && Array.isArray(OHE_POLES_DATA)) {
     OHE_POLES_DATA.forEach(p => {
-      // Inverted L Railway Cantilever Mast Line Diagram SVG Icon
-      const invertedLHtml = `
-        <div class="ohe-mast-icon" style="position:relative; width:18px; height:22px; cursor:pointer;" title="⚡ OHE ${p.poleNo}">
-          <svg width="18" height="22" viewBox="0 0 18 22" style="overflow:visible; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">
-            <circle cx="4" cy="20" r="2.2" fill="#ef4444" stroke="#7f1d1d" stroke-width="0.8"/>
-            <line x1="4" y1="2" x2="4" y2="20" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="4" y1="3" x2="16" y2="3" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="15" cy="4" r="1.8" fill="#facc15" stroke="#854d0e" stroke-width="0.6"/>
-          </svg>
-        </div>
-      `;
-      const oheIcon = L.divIcon({
-        html: invertedLHtml,
-        className: 'ohe-mast-div-icon',
-        iconSize: [18, 22],
-        iconAnchor: [4, 20],
-        popupAnchor: [6, -18]
-      });
-      const marker = L.marker([p.lat, p.lon], { icon: oheIcon });
-      if (!window.oheMarkerMap) window.oheMarkerMap = {};
-      window.oheMarkerMap[p.poleNo] = marker;
-
-      marker.bindTooltip(`⚡ OHE ${p.poleNo}`, {
-        permanent: false,
-        direction: 'top',
-        className: 'ohe-mast-tooltip',
-        offset: [0, -3]
-      });
-
-      const surveyNote = p.surveyNo ? `<div style="font-size:10px; color:#f59e0b; margin-top:2px;">(Survey Tag: ${p.surveyNo})</div>` : '';
-      const popupHtml = `
-        <div class="ohe-mast-popup" style="font-family:system-ui,-apple-system,sans-serif; min-width:210px; color:#f8fafc; padding:3px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:6px;">
-            <span style="font-weight:800; color:#ef4444; font-size:14px; letter-spacing:0.5px;">⚡ OHE ${p.poleNo}</span>
-            <span style="background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444; border-radius:3px; padding:1px 5px; font-size:9px; font-weight:800;">OHE MAST</span>
-          </div>
-          ${surveyNote}
-          <div style="font-size:11.5px; color:#cbd5e1; line-height:1.5;">
-            <div>📍 <b>Chainage:</b> <span style="font-family:monospace; color:#38bdf8; font-weight:700;">KM ${p.chainage.toFixed(3)}</span></div>
-            <div>🏢 <b>Section:</b> <span>${p.section}</span></div>
-            <div>🌐 <b>GPS:</b> <span style="font-family:monospace; color:#94a3b8;">${p.lat.toFixed(6)}°, ${p.lon.toFixed(6)}°</span></div>
-            <div>⛰️ <b>MSL Altitude:</b> <span>${p.alt ? p.alt.toFixed(1) + ' m' : 'N/A'}</span></div>
-          </div>
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button onclick="navigateToKm(${p.chainage}, false, false, {lat:${p.lat}, lon:${p.lon}})" style="flex:1; background:#0284c7; color:#fff; border:none; border-radius:4px; padding:5px 0; font-size:11px; font-weight:700; cursor:pointer;">
-              🎯 Focus Track
-            </button>
-            <button onclick="navigator.clipboard.writeText('${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}'); alert('GPS Coordinates copied: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}')" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:4px; padding:5px 8px; font-size:11px; cursor:pointer;" title="Copy GPS Coordinates">
-              📋
-            </button>
-          </div>
-        </div>
-      `;
-      marker.bindPopup(popupHtml, { minWidth: 210, className: 'ohe-popup-custom' });
-
-      oheGroup.addLayer(marker);
+      window.oheMarkerMap[p.poleNo] = {
+        pole: p,
+        openPopup: function() {
+          window.openOhePolePopup(p);
+        },
+        closePopup: function() {
+          if (map) map.closePopup();
+        },
+        getLatLng: function() {
+          return L.latLng(p.lat, p.lon);
+        }
+      };
     });
   }
+
+  // Initialize Canvas Layer and attach to map
+  oheGroup = L.oheCanvasLayer(typeof OHE_POLES_DATA !== 'undefined' ? OHE_POLES_DATA : []);
   oheGroup.addTo(map);
+
+  map.on('popupclose', function() {
+    if (oheGroup && oheGroup._activePole) {
+      oheGroup._activePole = null;
+      if (typeof oheGroup._update === 'function') oheGroup._update();
+    }
+  });
 
   // Points & Crossings Layer (Main Line Only - 41 turnouts plotted according to SRJ Chainage)
   const pointsGroup = L.layerGroup();
@@ -3484,7 +3824,7 @@ function initMap() {
   const overlays = { 
     "Main Track (Blue Line)": trackPolyline, 
     "🔀 Points & Crossings (Main Line)": pointsGroup,
-    "⚡ OHE Masts (1,663)": oheGroup,
+    [`⚡ OHE Masts (${(typeof OHE_POLES_DATA !== 'undefined' ? OHE_POLES_DATA.length : 3456).toLocaleString()})`]: oheGroup,
     "Curves / वक्र": curveGroup,
     "Main Line Bridges": bridgeGroup, 
     "Link Line (KM 1173 Bifurcation)": linkLineGroup,
